@@ -1,28 +1,11 @@
 <template>
   <div class="app">
-    <h1>DeepSeek Enchant</h1>
-    <p>{{ message }}</p>
-    <div class="status">
-      Backend Status: {{ backendStatus }}
-    </div>
+    <ChatBox />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const message = "Welcome to DeepSeek Enchant!"
-const backendStatus = ref('Checking...')
-
-onMounted(async () => {
-  try {
-    const response = await fetch('/api')
-    const data = await response.json()
-    backendStatus.value = data.message
-  } catch (error) {
-    backendStatus.value = 'Error connecting to backend'
-  }
-})
+import ChatBox from './components/ChatBox.vue'
 </script>
 
 <style>
@@ -32,11 +15,19 @@ onMounted(async () => {
   font-weight: 400;
 }
 
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
 .app {
+  min-height: 100vh;
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  background-color: #f5f5f5;
 }
 
 h1 {
