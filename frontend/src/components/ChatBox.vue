@@ -1,15 +1,23 @@
 <template>
   <div class="chat-container">
     <div class="chat-messages" ref="messagesContainer">
-      <div v-for="(msg, index) in messages" 
-           :key="index" 
-           :class="['message', msg.role === 'user' ? 'user-message' : 'bot-message']">
-        <div class="message-content">
-          <div class="message-header">
-            {{ msg.role === 'user' ? '用户' : 'AI' }}
+      <div 
+        v-for="(msg, index) in messages" 
+        :key="index"
+        :class="['message-wrapper', msg.role === 'user' ? 'user-message' : 'ai-message']"
+      >
+        <template v-if="msg.role === 'assistant'">
+          <div class="avatar-container">
+            <img src="../assets/bot-avatar.svg" alt="Bot Avatar" />
           </div>
-          <div class="message-text">{{ msg.content }}</div>
-        </div>
+          <MessageDisplay :content="msg.content" :isUser="false" />
+        </template>
+        <template v-else>
+          <MessageDisplay :content="msg.content" :isUser="true" />
+          <div class="avatar-container">
+            <img src="../assets/user-avatar.svg" alt="User Avatar" />
+          </div>
+        </template>
       </div>
     </div>
     
@@ -32,6 +40,7 @@
 import { ref, nextTick } from 'vue'
 import type { ChatMessage } from '../types/chat'
 import { sendMessage as apiSendMessage } from '../api/chat'
+import MessageDisplay from './MessageDisplay.vue'
 
 const messages = ref<ChatMessage[]>([])
 const currentMessage = ref('')
@@ -75,9 +84,12 @@ function scrollToBottom() {
 <style scoped>
 .chat-container {
   height: 100vh;
+  width: 100vw;  /* 添加这行 */
+  min-width: 100%;  /* 添加这行 */
   display: flex;
   flex-direction: column;
   background-color: #f5f5f5;
+  overflow-x: hidden;  /* 添加这行防止水平滚动 */
 }
 
 .chat-messages {
@@ -86,33 +98,61 @@ function scrollToBottom() {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
 }
 
-.message {
-  max-width: 80%;
-  padding: 12px;
-  border-radius: 12px;
-  margin: 4px 0;
+.message-wrapper {
+  display: flex;
+  align-items: flex-start;  /* 确保顶部对齐 */
+  margin-bottom: 16px;
+  width: 100%;
+  gap: 8px;
 }
 
 .user-message {
-  align-self: flex-end;
+  justify-content: flex-end;  /* 使用 justify-content 代替 flex-direction */
+}
+
+.ai-message {
+  justify-content: flex-start;
+}
+
+.avatar-container {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background-color: #e4e6eb;  /* 加深背景色 */
+  border-radius: 4px;  /* 更小的圆角 */
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-container img {
+  width: 24px;
+  height: 24px;
+}
+
+.message-wrapper :deep(.message) {
+  max-width: calc(70% - 40px);
+  padding: 12px 16px;
+  border-radius: 4px;  /* 更小的圆角 */
+  word-wrap: break-word;
+  margin: 0;  /* 移除之前的 margin */
+}
+
+.user-message :deep(.message) {
   background-color: #007AFF;
   color: white;
+  border-radius: 4px;  /* 统一圆角大小 */
+  margin-left: 8px;  /* 改为左边距 */
 }
 
-.bot-message {
-  align-self: flex-start;
+.ai-message :deep(.message) {
   background-color: white;
   color: #333;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.message-header {
-  font-size: 0.8em;
-  margin-bottom: 4px;
-  opacity: 0.7;
+  border-radius: 4px;  /* 统一圆角大小 */
+  margin-right: 8px;  /* 改为右边距 */
 }
 
 .input-container {
@@ -127,7 +167,7 @@ function scrollToBottom() {
   flex: 1;
   padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 4px;  /* 更小的圆角 */
   resize: none;
   font-family: inherit;
 }
@@ -137,12 +177,17 @@ function scrollToBottom() {
   background-color: #007AFF;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;  /* 更小的圆角 */
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.send-button:hover {
+.send-button:hover:not(:disabled) {
   background-color: #0056b3;
+}
+
+.send-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 </style>

@@ -2,6 +2,8 @@
 
 基于 DeepSeek 的个性化 AI 智能体探索项目 | Exploring personalized AI agents with DeepSeek
 
+![项目预览](docs/preview.png)
+
 ## 项目简介 | Introduction
 
 本项目旨在探索和开发基于 DeepSeek 的 AI 智能体，通过深度学习技术打造实用的 AI 助手。
