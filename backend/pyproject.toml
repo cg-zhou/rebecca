@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "deepseek-enchant-backend"
+version = "0.1.0"
+description = "DeepSeek Enchant Backend"
+authors = ["Your Name <you@example.com>"]
+packages = [
+    { include = "deepseek_enchant", from = "src" }
+]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.104.1"
+uvicorn = "^0.24.0"
+python-dotenv = "^1.0.0"
+psutil = "^5.9.6"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
