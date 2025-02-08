@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+from app.api_client import get_api_client
 
 app = FastAPI()
 
@@ -22,11 +23,22 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    # 获取最后一条用户消息
-    last_message = request.messages[-1].content
-    return {
-        "response": f"你发送的消息是：{last_message}"
-    }
+    try:
+        client = get_api_client()
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=2000
+        )
+        
+        return {
+            "response": response.choices[0].message.content
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 async def root():
