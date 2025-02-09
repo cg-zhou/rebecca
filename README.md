@@ -2,7 +2,7 @@
 
 基于 DeepSeek 的个性化 AI 智能体探索项目 | Exploring personalized AI agents with DeepSeek
 
-![项目预览](docs/preview.png)
+![项目预览](/docs/preview.png)
 
 ## 项目简介 | Introduction
 
@@ -33,15 +33,63 @@ This project aims to explore and develop AI agents based on DeepSeek, creating p
 ```bash
 # 克隆仓库 | Clone the repository
 git clone https://github.com/cg-zhou/deepseek-enchant.git
+cd deepseek-enchant
 
 # 安装依赖 | Install dependencies
-pip install -r requirements.txt
+make install
+
+# 启动开发环境 | Start development
+make dev
+```
+
+访问地址 | Access URLs:
+- 前端 | Frontend: http://localhost:5173 
+- 后端 | Backend: http://localhost:8000
+
+### 使用 Make 命令（推荐）| Using Make Commands (Recommended)
+
+```bash
+# 克隆仓库 | Clone the repository
+git clone https://github.com/cg-zhou/deepseek-enchant.git
+cd deepseek-enchant
+
+# 安装所有依赖 | Install all dependencies
+make install
+
+# 启动开发环境 | Start development environment
+make dev
+
+# 运行测试 | Run tests
+make test
+
+# 构建项目 | Build project
+make build
+
+# 清理构建文件 | Clean build files
+make clean
+```
+
+### 手动启动 | Manual Setup
+
+```bash
+# 克隆仓库 | Clone the repository
+git clone https://github.com/cg-zhou/deepseek-enchant.git
+cd deepseek-enchant
+
+# 安装前端依赖 | Install frontend dependencies
+cd frontend && npm install
+
+# 安装后端依赖 | Install backend dependencies
+cd ../backend && poetry install
 
 # 配置环境变量 | Configure environment variables
 cp .env.example .env
 
-# 运行应用 | Run the application
-python main.py
+# 启动后端服务 | Start backend server
+cd backend && poetry run python main.py
+
+# 新开终端，启动前端服务 | Open new terminal, start frontend server
+cd frontend && npm run dev
 ```
 
 ## 许可证 | License
