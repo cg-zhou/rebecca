@@ -43,7 +43,7 @@ import { sendMessage as apiSendMessage } from '../api/chat'
 import MessageDisplay from './MessageDisplay.vue'
 
 const messages = ref<ChatMessage[]>([])
-const currentMessage = ref('')
+const currentMessage = ref('写一段python程序')
 const isLoading = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
 
@@ -84,12 +84,12 @@ function scrollToBottom() {
 <style scoped>
 .chat-container {
   height: 100vh;
-  width: 100vw;  /* 添加这行 */
-  min-width: 100%;  /* 添加这行 */
+  width: 100vw;
+  min-width: 100%;
   display: flex;
   flex-direction: column;
   background-color: #f5f5f5;
-  overflow-x: hidden;  /* 添加这行防止水平滚动 */
+  overflow-x: hidden;
 }
 
 .chat-messages {
@@ -102,14 +102,14 @@ function scrollToBottom() {
 
 .message-wrapper {
   display: flex;
-  align-items: flex-start;  /* 确保顶部对齐 */
+  align-items: flex-start;
   margin-bottom: 16px;
   width: 100%;
   gap: 8px;
 }
 
 .user-message {
-  justify-content: flex-end;  /* 使用 justify-content 代替 flex-direction */
+  justify-content: flex-end;
 }
 
 .ai-message {
@@ -126,29 +126,29 @@ function scrollToBottom() {
 }
 
 .avatar-container img {
-  width: 32px;  /* 增大图片尺寸 */
-  height: 32px;  /* 增大图片尺寸 */
+  width: 32px;
+  height: 32px;
 }
 
 .message-wrapper :deep(.message) {
   max-width: calc(70% - 40px);
   border-radius: 4px;
   word-wrap: break-word;
-  margin: 0;  /* 移除之前的 margin */
+  margin: 0;
 }
 
 .user-message :deep(.message) {
-  background-color: #007AFF;
-  color: white;
-  border-radius: 4px;  /* 统一圆角大小 */
-  margin-left: 8px;  /* 改为左边距 */
+  background-color: #E6E1FF;  /* 改为浅紫色背景 */
+  color: #333;  /* 改为深色文字 */
+  border-radius: 4px;
+  margin-left: 8px;
 }
 
 .ai-message :deep(.message) {
   background-color: white;
   color: #333;
-  border-radius: 4px;  /* 统一圆角大小 */
-  margin-right: 8px;  /* 改为右边距 */
+  border-radius: 4px;
+  margin-right: 8px;
 }
 
 .input-container {
@@ -163,23 +163,23 @@ function scrollToBottom() {
   flex: 1;
   padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;  /* 更小的圆角 */
+  border-radius: 4px;
   resize: none;
   font-family: inherit;
 }
 
 .send-button {
   padding: 0 20px;
-  background-color: #007AFF;
+  background-color: #7B68EE;  /* 保持按钮为深紫色 */
   color: white;
   border: none;
-  border-radius: 4px;  /* 更小的圆角 */
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: #0056b3;
+  background-color: #6A5ACD;  /* 悬停时颜色稍深 */
 }
 
 .send-button:disabled {

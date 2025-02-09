@@ -50,7 +50,6 @@ const renderedContent = computed(() => {
   text-align: left;
 }
 
-/* Markdown 样式 */
 .markdown-body {
   color: #24292e;
   line-height: 1.6;
