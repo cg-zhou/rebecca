@@ -40,7 +40,7 @@ const renderedContent = computed(() => {
 .message {
   display: flex;
   margin: 1rem 0;
-  padding: 12px 16px;
+  padding: 0 10px;
   line-height: 1.5;
 }
 

@@ -120,23 +120,19 @@ function scrollToBottom() {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
-  background-color: #e4e6eb;  /* 加深背景色 */
-  border-radius: 4px;  /* 更小的圆角 */
-  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .avatar-container img {
-  width: 24px;
-  height: 24px;
+  width: 32px;  /* 增大图片尺寸 */
+  height: 32px;  /* 增大图片尺寸 */
 }
 
 .message-wrapper :deep(.message) {
   max-width: calc(70% - 40px);
-  padding: 12px 16px;
-  border-radius: 4px;  /* 更小的圆角 */
+  border-radius: 4px;
   word-wrap: break-word;
   margin: 0;  /* 移除之前的 margin */
 }
