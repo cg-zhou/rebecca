@@ -7,14 +7,25 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
+    <WebProjectPath>../web</WebProjectPath>
+    <WebDistPath>$(WebProjectPath)/dist</WebDistPath>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="favicon.ico" />
+    <EmbeddedResource Include="$(WebDistPath)/**/*.*">
+      <LogicalName>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
   </ItemGroup>
+
+  <Target Name="BuildWeb" BeforeTargets="BeforeBuild">
+    <Message Text="Building web project..." Importance="high" />
+    <Exec Command="yarn install" WorkingDirectory="$(WebProjectPath)" />
+    <Exec Command="yarn build" WorkingDirectory="$(WebProjectPath)" />
+  </Target>
 
 </Project>
