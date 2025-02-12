@@ -1,0 +1,28 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--el-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--el-text-color-primary);
+  background-color: var(--el-bg-color);
+}
+
+/* Common utility classes */
+.page-container {
+  padding: 20px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Element Plus customization */
+:root {
+  --el-color-primary: #409EFF;
+}
