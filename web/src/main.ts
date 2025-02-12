@@ -4,7 +4,7 @@ import 'element-plus/dist/index.css'
 import './styles/element-variables.scss'
 import App from './App.vue'
 import './styles/global.css'
-import router from './router'
+import router from './router/routes'
 import { createPinia } from 'pinia'
 
 const app = createApp(App)

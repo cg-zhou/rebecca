@@ -1,4 +1,6 @@
 import Home from '../views/Home.vue'
+import Settings from '../views/Settings.vue'
+import About from '../views/About.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -8,11 +10,14 @@ const routes = [
     component: Home
   },
   {
+    path: '/settings',
+    name: 'settings',
+    component: Settings
+  },
+  {
     path: '/about',
-    component: () => import('../views/About.vue'),
-    meta: {
-      title: '关于'
-    }
+    name: 'about',
+    component: About
   }
 ]
 
