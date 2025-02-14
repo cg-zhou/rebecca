@@ -1,7 +1,5 @@
-﻿using System.Windows;
+﻿namespace Rebecca;
 
-namespace Rebecca;
-
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
 }

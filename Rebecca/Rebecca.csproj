@@ -9,6 +9,7 @@
     <ApplicationIcon>favicon.ico</ApplicationIcon>
     <WebProjectPath>../web</WebProjectPath>
     <WebDistPath>$(WebProjectPath)/dist</WebDistPath>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
