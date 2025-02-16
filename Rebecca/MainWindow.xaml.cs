@@ -1,7 +1,8 @@
-﻿using System.Windows;
-using System.ComponentModel;
+﻿using Microsoft.Web.WebView2.Core;
 using Rebecca.Services;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Windows;
 
 namespace Rebecca;
 
@@ -34,10 +35,10 @@ public partial class MainWindow : Window
         {
             await webView.EnsureCoreWebView2Async();
             _port = PortFinder.FindAvailable(8080);
-            
+
             // 添加导航事件处理
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
-            
+
             _httpServer = new HttpServer(_port, GetType().Assembly);
             _httpServer.Start();
 
@@ -50,10 +51,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void CoreWebView2_NewWindowRequested(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2NewWindowRequestedEventArgs e)
+    private void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {
         e.Handled = true;
-        Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
+        var processStartInfo = new ProcessStartInfo(e.Uri) { UseShellExecute = true };
+        Process.Start(processStartInfo);
     }
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
@@ -63,12 +65,5 @@ public partial class MainWindow : Window
             _trayIconService.Dispose();
             _httpServer?.Dispose();
         }
-    }
-
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        e.Cancel = true;
-        _trayIconService.MinimizeToTray();
-        base.OnClosing(e);
     }
 }
