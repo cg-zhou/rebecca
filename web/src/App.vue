@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { House, InfoFilled, Setting } from '@element-plus/icons-vue'
+import { House, InfoFilled, Setting, Folder } from '@element-plus/icons-vue'
 </script>
 
 <template>
@@ -11,6 +11,10 @@ import { House, InfoFilled, Setting } from '@element-plus/icons-vue'
             <el-menu-item index="/">
               <el-icon><House /></el-icon>
               <span>首页</span>
+            </el-menu-item>
+            <el-menu-item index="/media-library">
+              <el-icon><Folder /></el-icon>
+              <span>媒体库</span>
             </el-menu-item>
           </div>
           <div class="bottom-menu">
