@@ -1,6 +1,6 @@
+using Rebecca.Services.Api;
 using System.Net;
 using System.Reflection;
-using Rebecca.Services.Api;
 
 namespace Rebecca.Services;
 
@@ -8,7 +8,7 @@ public class HttpServer : IDisposable
 {
     private readonly HttpListener _listener;
     private readonly Assembly _resourceAssembly;
-    private readonly ApiHandlerRegistry _apiHandlers;
+    private readonly ControllerRegistry _apiHandlers;
     private bool _isRunning;
 
     public HttpServer(int port, Assembly resourceAssembly)
@@ -16,7 +16,7 @@ public class HttpServer : IDisposable
         _resourceAssembly = resourceAssembly;
         _listener = new HttpListener();
         _listener.Prefixes.Add($"http://localhost:{port}/");
-        _apiHandlers = new ApiHandlerRegistry();
+        _apiHandlers = new ControllerRegistry();
     }
 
     public void Start()
@@ -39,7 +39,7 @@ public class HttpServer : IDisposable
             try
             {
                 var context = await _listener.GetContextAsync();
-                ProcessRequest(context);
+                await HandleRequestAsync(context);
             }
             catch (Exception ex) when (_listener.IsListening)
             {
@@ -48,17 +48,35 @@ public class HttpServer : IDisposable
         }
     }
 
-    private void ProcessRequest(HttpListenerContext context)
+    private async Task HandleRequestAsync(HttpListenerContext context)
+    {
+        try
+        {
+            var path = (context.Request.Url?.AbsolutePath ?? "").Trim('/');
+            if (path.StartsWith("api/") || path.Equals("api"))
+            {
+                await _apiHandlers.HandleRequestAsync(context);
+                return;
+            }
+
+            await HandleStaticFileAsync(context);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error processing request: {ex}");
+            context.Response.StatusCode = 500;
+        }
+        finally
+        {
+            context.Response.Close();
+        }
+    }
+
+    private async Task HandleStaticFileAsync(HttpListenerContext context)
     {
         try
         {
             var path = context.Request.Url?.LocalPath ?? "/";
-            if (path.StartsWith("/api/"))
-            {
-                HandleApiRequest(context);
-                return;
-            }
-
             var indexHtmlPath = "/index.html";
             if (path == "/")
             {
@@ -78,7 +96,7 @@ public class HttpServer : IDisposable
 
             using (stream)
             {
-                stream!.CopyTo(context.Response.OutputStream);
+                await stream!.CopyToAsync(context.Response.OutputStream);
             }
         }
         catch (Exception ex)
@@ -86,27 +104,6 @@ public class HttpServer : IDisposable
             System.Diagnostics.Debug.WriteLine($"Error processing request: {ex}");
             context.Response.StatusCode = 500;
         }
-        finally
-        {
-            context.Response.Close();
-        }
-    }
-
-    private async void HandleApiRequest(HttpListenerContext context)
-    {
-        var path = context.Request.Url?.LocalPath ?? "/";
-        var method = context.Request.HttpMethod;
-
-        var handler = _apiHandlers.GetHandler(path);
-        if (handler != null && handler.Method == method)
-        {
-            await handler.HandleAsync(context);
-        }
-        else
-        {
-            context.Response.StatusCode = 404;
-        }
-        context.Response.Close();
     }
 
     public void Dispose()
