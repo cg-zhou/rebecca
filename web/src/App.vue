@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { House, InfoFilled, Setting, Folder } from '@element-plus/icons-vue'
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+
+const route = useRoute()
+const activeMenu = computed(() => route.path)
 </script>
 
 <template>
   <el-container class="layout-container">
     <el-aside width="180px">
       <div class="menu-container">
-        <el-menu mode="vertical" router class="side-menu" default-active="/">
+        <el-menu mode="vertical" router class="side-menu" :default-active="activeMenu">
           <div class="top-menu">
             <el-menu-item index="/">
               <el-icon><House /></el-icon>
