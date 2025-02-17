@@ -36,6 +36,8 @@ public partial class MainWindow : Window
             await webView.EnsureCoreWebView2Async();
             _port = PortFinder.FindAvailable(8080);
 
+            webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+
             // 添加导航事件处理
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
 
