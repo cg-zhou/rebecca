@@ -65,7 +65,7 @@ const removePath = (index: number) => {
 // 选择文件夹
 const selectFolder = async (index: number) => {
   try {
-    const response = await fetch('/api/folder/select')
+    const response = await fetch('/api/folder')
     const result = await response.json()
     if (result.success) {
       libraryPaths.value[index] = result.path
