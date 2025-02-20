@@ -1,7 +1,10 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite';
+import plugin from '@vitejs/plugin-vue';
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+    plugins: [plugin()],
+    server: {
+        port:  4074,
+    }
 })

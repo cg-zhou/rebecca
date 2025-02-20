@@ -7,20 +7,14 @@ namespace Rebecca.Services
     public class WebHostService
     {
         private WebApplication? _app;
-        private readonly PortFinder _portFinder;
-        public int Port { get; private set; }
-
-        public WebHostService(PortFinder portFinder)
-        {
-            _portFinder = portFinder;
-        }
+        public int Port { get; private set; } = 0;
 
         public async Task StartAsync()
         {
             var builder = WebApplication.CreateBuilder();
             
             // Find an available port
-            Port = await _portFinder.FindAvailablePortAsync();
+            Port = PortFinder.FindAvailable(8080);
             
             // Configure the URL
             builder.WebHost.UseUrls($"http://localhost:{Port}");

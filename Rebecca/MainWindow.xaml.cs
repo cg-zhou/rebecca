@@ -8,9 +8,7 @@ namespace Rebecca;
 
 public partial class MainWindow : Window
 {
-    private HttpServer? _httpServer;
     private readonly TrayIconService _trayIconService;
-    private int _port;
 
     public MainWindow()
     {
@@ -34,17 +32,9 @@ public partial class MainWindow : Window
         try
         {
             await webView.EnsureCoreWebView2Async();
-            _port = PortFinder.FindAvailable(8080);
-
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-
-            // 添加导航事件处理
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
-
-            _httpServer = new HttpServer(_port, GetType().Assembly);
-            _httpServer.Start();
-
-            webView.Source = new Uri($"http://localhost:{_port}/");
+            webView.Source = new Uri($"http://localhost:{4074}/");
         }
         catch (Exception ex)
         {
@@ -65,7 +55,6 @@ public partial class MainWindow : Window
         if (e.Cancel == false)
         {
             _trayIconService.Dispose();
-            _httpServer?.Dispose();
         }
     }
 }

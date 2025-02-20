@@ -24,10 +24,14 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
   </ItemGroup>
 
-  <Target Name="BuildWeb" BeforeTargets="BeforeBuild">
+  <ItemGroup>
+    <ProjectReference Include="..\web\web.esproj" />
+  </ItemGroup>
+
+  <!--<Target Name="BuildWeb" BeforeTargets="BeforeBuild">
     <Message Text="Building web project..." Importance="high" />
     <Exec Command="yarn install" WorkingDirectory="$(WebProjectPath)" />
     <Exec Command="yarn build" WorkingDirectory="$(WebProjectPath)" />
-  </Target>
+  </Target>-->
 
 </Project>

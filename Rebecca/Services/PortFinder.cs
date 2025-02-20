@@ -42,17 +42,4 @@ public class PortFinder
 
         return port;
     }
-
-    public async Task<int> FindAvailablePortAsync()
-    {
-        // Create a new TCP listener
-        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        
-        // Bind to port 0, which lets the OS assign an available port
-        socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
-        
-        // Get the assigned port number
-        var endPoint = (IPEndPoint)socket.LocalEndPoint!;
-        return endPoint.Port;
-    }
 }
