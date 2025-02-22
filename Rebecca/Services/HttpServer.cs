@@ -1,4 +1,3 @@
-using Rebecca.Services.Api;
 using System.Net;
 using System.Reflection;
 
@@ -8,7 +7,6 @@ public class HttpServer : IDisposable
 {
     private readonly HttpListener _listener;
     private readonly Assembly _resourceAssembly;
-    private readonly ControllerRegistry _apiHandlers;
     private bool _isRunning;
 
     public HttpServer(int port, Assembly resourceAssembly)
@@ -16,7 +14,6 @@ public class HttpServer : IDisposable
         _resourceAssembly = resourceAssembly;
         _listener = new HttpListener();
         _listener.Prefixes.Add($"http://localhost:{port}/");
-        _apiHandlers = new ControllerRegistry();
     }
 
     public void Start()
@@ -55,7 +52,6 @@ public class HttpServer : IDisposable
             var path = (context.Request.Url?.AbsolutePath ?? "").Trim('/');
             if (path.StartsWith("api/") || path.Equals("api"))
             {
-                await _apiHandlers.HandleRequestAsync(context);
                 return;
             }
 

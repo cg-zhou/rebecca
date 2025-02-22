@@ -1,31 +1,36 @@
-using Rebecca.Services.Api;
+﻿using Microsoft.AspNetCore.Mvc;
 
-namespace Rebecca.Controllers;
-
-public class FolderController : IController
+namespace Rebecca.Controllers
 {
-    public async Task<object?> SelectAsync()
+    [ApiController]
+    [Route("api/[controller]")]
+    public class FolderController : ControllerBase
     {
-        return await Task.Run(() =>
+        [HttpGet]
+        public async Task<IActionResult> GetAsync()
         {
-            string? selectedPath = null;
-            var thread = new Thread(() =>
+            var path = await Task.Run(() =>
             {
-                using var folderDialog = new FolderBrowserDialog();
-                if (folderDialog.ShowDialog() == DialogResult.OK)
+                string? selectedPath = null;
+                var thread = new Thread(() =>
                 {
-                    selectedPath = folderDialog.SelectedPath;
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
+                    using var folderDialog = new FolderBrowserDialog();
+                    if (folderDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        selectedPath = folderDialog.SelectedPath;
+                    }
+                });
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+                thread.Join();
 
-            return new
-            {
-                success = !string.IsNullOrWhiteSpace(selectedPath),
-                path = selectedPath
-            };
-        });
+                return new
+                {
+                    success = !string.IsNullOrWhiteSpace(selectedPath),
+                    path = selectedPath
+                };
+            });
+            return Ok(path);
+        }
     }
 }

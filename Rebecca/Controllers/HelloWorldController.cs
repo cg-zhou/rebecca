@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Rebecca.Controllers.Api
+namespace Rebecca.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
