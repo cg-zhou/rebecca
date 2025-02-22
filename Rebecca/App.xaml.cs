@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Rebecca.Services;
+using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using Application = System.Windows.Application;
 
 namespace Rebecca
@@ -13,14 +15,37 @@ namespace Rebecca
 
         public App()
         {
+            // 添加全局异常处理
+            DispatcherUnhandledException += App_DispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
             _services = new ServiceCollection();
             ConfigureServices();
+        }
+
+        private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            LogService.Instance.Log($"UI Thread Exception: {e.Exception}");
+            System.Windows.MessageBox.Show($"发生错误: {e.Exception.Message}\n\n日志位置: {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Rebecca", "logs.txt")}", 
+                          "错误", 
+                          MessageBoxButton.OK, 
+                          MessageBoxImage.Error);
+            e.Handled = true;
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                LogService.Instance.Log($"Application Exception: {ex}");
+            }
         }
 
         private void ConfigureServices()
         {
             _services.AddSingleton<PortFinder>();
             _services.AddSingleton<WebHostService>();
+            _services.AddSingleton<MainWindow>();
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -30,6 +55,9 @@ namespace Rebecca
             _serviceProvider = _services.BuildServiceProvider();
             _webHostService = _serviceProvider.GetRequiredService<WebHostService>();
             await _webHostService.StartAsync();
+
+            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            mainWindow.Show();
         }
 
         protected override async void OnExit(ExitEventArgs e)

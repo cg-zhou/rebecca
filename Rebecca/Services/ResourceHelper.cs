@@ -25,17 +25,22 @@ public class ResourceHelper
 
     public static Stream? GetEmbeddedResource(string path, Assembly assembly)
     {
-        var resourceName = @"wwwroot\" + path.Replace('/', '\\').TrimStart('\\');
-
-        var names = assembly.GetManifestResourceNames();
-        var fullResourceName = names.FirstOrDefault(x =>
-            x.ToUpper() == resourceName.ToUpper());
-
-        if (fullResourceName == null)
+        path = path.TrimStart('/');
+        if (string.IsNullOrEmpty(path))
         {
-            return null;
+            path = "index.html";
         }
 
-        return assembly.GetManifestResourceStream(fullResourceName);
+        var resourcePath = $"Rebecca.wwwroot.{path.Replace('/', '.')}";
+        var stream = assembly.GetManifestResourceStream(resourcePath);
+        
+        LogService.Instance.Log($"Trying to get resource: {resourcePath}, Found: {stream != null}");
+        
+        return stream;
+    }
+
+    public static string[] GetEmbeddedResourceNames(Assembly assembly)
+    {
+        return assembly.GetManifestResourceNames();
     }
 }

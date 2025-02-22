@@ -10,13 +10,11 @@
     <WebProjectPath>../web</WebProjectPath>
     <WebDistPath>$(WebProjectPath)/dist</WebDistPath>
     <UseWindowsForms>true</UseWindowsForms>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="favicon.ico" />
-    <EmbeddedResource Include="$(WebDistPath)/**/*.*">
-      <LogicalName>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
-    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
@@ -25,13 +23,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\web\web.esproj" />
+    <ProjectReference Include="..\web\web.esproj" Condition="'$(Configuration)' == 'Debug'" />
   </ItemGroup>
 
-  <!--<Target Name="BuildWeb" BeforeTargets="BeforeBuild">
-    <Message Text="Building web project..." Importance="high" />
-    <Exec Command="yarn install" WorkingDirectory="$(WebProjectPath)" />
-    <Exec Command="yarn build" WorkingDirectory="$(WebProjectPath)" />
-  </Target>-->
+  <!-- 只在Release模式下嵌入前端文件 -->
+  <Target Name="BuildWebRelease" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Release'">
+    <Message Text="Building web project for release..." Importance="high" />
+    <Exec Command="npm install" WorkingDirectory="$(WebProjectPath)" />
+    <Exec Command="npm run build" WorkingDirectory="$(WebProjectPath)" />
+    <ItemGroup>
+      <_WebDistFiles Include="$(WebDistPath)/**/*.*" />
+      <EmbeddedResource Include="@(_WebDistFiles)">
+        <LogicalName>wwwroot\%(RecursiveDir)$([System.String]::Copy('%(Filename)%(Extension)'))</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
 
 </Project>

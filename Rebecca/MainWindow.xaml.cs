@@ -3,13 +3,16 @@ using Rebecca.Services;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Rebecca;
 
 public partial class MainWindow : Window
 {
     private readonly TrayIconService _trayIconService;
+    private readonly WebHostService? _webHostService;
 
+    // 用于设计器
     public MainWindow()
     {
         InitializeComponent();
@@ -17,6 +20,12 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
         StateChanged += MainWindow_StateChanged;
+    }
+
+    // 用于运行时
+    public MainWindow(WebHostService webHostService) : this()
+    {
+        _webHostService = webHostService;
     }
 
     private void MainWindow_StateChanged(object? sender, EventArgs e)
@@ -34,11 +43,20 @@ public partial class MainWindow : Window
             await webView.EnsureCoreWebView2Async();
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
-            webView.Source = new Uri($"http://localhost:{4074}/");
+            
+            if (_webHostService != null)
+            {
+                webView.Source = new Uri($"http://localhost:{_webHostService.Port}/");
+            }
+            else
+            {
+                MessageBox.Show("WebHostService not initialized");
+                Close();
+            }
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"启动失败: {ex.Message}");
+            MessageBox.Show($"启动失败: {ex.Message}");
             Close();
         }
     }
