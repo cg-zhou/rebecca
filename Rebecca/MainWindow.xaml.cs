@@ -43,7 +43,7 @@ public partial class MainWindow : Window
             await webView.EnsureCoreWebView2Async();
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
-            
+
             if (_webHostService != null)
             {
                 webView.Source = new Uri($"http://localhost:{_webHostService.Port}/");

@@ -26,9 +26,9 @@ namespace Rebecca
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             LogService.Instance.Log($"UI Thread Exception: {e.Exception}");
-            System.Windows.MessageBox.Show($"发生错误: {e.Exception.Message}\n\n日志位置: {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Rebecca", "logs.txt")}", 
-                          "错误", 
-                          MessageBoxButton.OK, 
+            System.Windows.MessageBox.Show($"发生错误: {e.Exception.Message}\n\n日志位置: {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Rebecca", "logs.txt")}",
+                          "错误",
+                          MessageBoxButton.OK,
                           MessageBoxImage.Error);
             e.Handled = true;
         }
@@ -43,7 +43,6 @@ namespace Rebecca
 
         private void ConfigureServices()
         {
-            _services.AddSingleton<PortFinder>();
             _services.AddSingleton<WebHostService>();
             _services.AddSingleton<MainWindow>();
         }

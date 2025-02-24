@@ -11,7 +11,12 @@
     <WebDistPath>$(WebProjectPath)/dist</WebDistPath>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Remove="app.manifest" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="favicon.ico" />
@@ -23,7 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\web\web.esproj" Condition="'$(Configuration)' == 'Debug'" />
+    <ProjectReference Include="..\StdEx\StdEx.csproj" />
+    <!--<ProjectReference Include="..\web\web.esproj" Condition="'$(Configuration)' == 'Debug'" />-->
   </ItemGroup>
 
   <!-- 只在Release模式下嵌入前端文件 -->
