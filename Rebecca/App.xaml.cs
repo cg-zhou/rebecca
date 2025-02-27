@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rebecca.Services;
+using StdEx.Media.Tmdb;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -43,6 +45,13 @@ namespace Rebecca
 
         private void ConfigureServices()
         {
+            // Add logging services
+            _services.AddLogging(configure => 
+            {
+                configure.AddConsole();
+                configure.AddDebug();
+            });
+            
             _services.AddSingleton<WebHostService>();
             _services.AddSingleton<MainWindow>();
         }

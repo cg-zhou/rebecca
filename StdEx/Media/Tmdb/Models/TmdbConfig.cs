@@ -10,5 +10,6 @@ namespace StdEx.Media.Tmdb.Models
         public string BaseApiUrl { get; set; } = DefaultBaseApiUrl;
         public string BaseImageUrl { get; set; } = DefaultBaseImageUrl;
         public string Language { get; set; } = DefaultLanguage;
+        public string? ApiKeyType { get; set; } = "v4";  // 添加 API Key 类型，默认为 v4
     }
 }
