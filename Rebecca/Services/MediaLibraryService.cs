@@ -5,10 +5,13 @@ using StdEx.Media.Tmdb;
 using StdEx.Serialization;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Net.Http;
+using System.Net.Security;
+using System.Security.Authentication;
 
 namespace Rebecca.Services
 {
-    public class MediaLibraryService : BackgroundService
+    public class MediaLibraryService : BackgroundService, IDisposable
     {
         private readonly ILogger<MediaLibraryService> _logger;
         private readonly ITmdbSettingsService _tmdbSettingsService;
@@ -29,12 +32,24 @@ namespace Rebecca.Services
         // 用于取消当前扫描任务
         private CancellationTokenSource? _scanCancellationTokenSource;
 
+        private readonly HttpClient _httpClient;
+        private const int MaxRetries = 3;
+
         public bool IsScanning { get; private set; } = false;
 
         public MediaLibraryService(ILogger<MediaLibraryService> logger, ITmdbSettingsService tmdbSettingsService)
         {
             _logger = logger;
             _tmdbSettingsService = tmdbSettingsService;
+
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true,
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                CheckCertificateRevocationList = false
+            };
+            _httpClient = new HttpClient(handler);
+            _httpClient.Timeout = TimeSpan.FromMinutes(5);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -323,20 +338,35 @@ namespace Rebecca.Services
                 return;
             }
 
-            try
+            for (int retry = 0; retry < MaxRetries; retry++)
             {
-                using var httpClient = new System.Net.Http.HttpClient();
-                using var response = await httpClient.GetAsync(url, cancellationToken);
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    response.EnsureSuccessStatusCode();
 
-                using var stream = await response.Content.ReadAsStreamAsync();
-                using var fileStream = File.Create(localPath);
-                await stream.CopyToAsync(fileStream, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Failed to download image from {url} to {localPath}");
-                throw;
+                    // 确保目标目录存在
+                    var directory = Path.GetDirectoryName(localPath);
+                    if (!string.IsNullOrEmpty(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+
+                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    using var fileStream = File.Create(localPath);
+                    await stream.CopyToAsync(fileStream, cancellationToken);
+                    return; // 下载成功，退出重试循环
+                }
+                catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
+                {
+                    if (retry == MaxRetries - 1)
+                    {
+                        _logger.LogError(ex, $"Failed to download image after {MaxRetries} attempts. URL: {url}");
+                        throw;
+                    }
+                    _logger.LogWarning($"Download attempt {retry + 1} failed, retrying... URL: {url}");
+                    await Task.Delay(TimeSpan.FromSeconds(2 * (retry + 1)), cancellationToken);
+                }
             }
         }
 
@@ -346,6 +376,12 @@ namespace Rebecca.Services
         public IEnumerable<MediaFile> GetAllMediaFiles()
         {
             return _mediaFiles.Values.ToList();
+        }
+
+        public override void Dispose()
+        {
+            _httpClient.Dispose();
+            base.Dispose();
         }
     }
 }
