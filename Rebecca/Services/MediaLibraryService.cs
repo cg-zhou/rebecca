@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebecca.Models;
 using StdEx.Media.Tmdb;
@@ -6,21 +5,17 @@ using StdEx.Serialization;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
-using System.Net.Security;
 using System.Security.Authentication;
 
 namespace Rebecca.Services
 {
-    public class MediaLibraryService : BackgroundService, IDisposable
+    public class MediaLibraryService : IDisposable
     {
         private readonly ILogger<MediaLibraryService> _logger;
         private readonly ITmdbSettingsService _tmdbSettingsService;
 
         // 存储所有媒体文件的字典
         private readonly ConcurrentDictionary<string, MediaFile> _mediaFiles = new ConcurrentDictionary<string, MediaFile>();
-
-        // 媒体库配置
-        private MediaLibraryConfig _config = new MediaLibraryConfig();
 
         // 支持的视频文件扩展名
         private static readonly string[] VideoExtensions =
@@ -52,108 +47,30 @@ namespace Rebecca.Services
             _httpClient.Timeout = TimeSpan.FromMinutes(5);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            _logger.LogInformation("Media Library Service is starting");
-
-            try
-            {
-                LoadConfiguration();
-
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    if (_config.AutoScan)
-                    {
-                        await ScanLibrariesAsync(stoppingToken);
-                    }
-
-                    // 等待配置的扫描间隔时间
-                    await Task.Delay(TimeSpan.FromMinutes(_config.ScanIntervalMinutes), stoppingToken);
-                }
-            }
-            catch (Exception ex) when (ex is not TaskCanceledException)
-            {
-                _logger.LogError(ex, "An error occurred in Media Library Service");
-            }
-
-            _logger.LogInformation("Media Library Service is stopping");
-        }
-
-        /// <summary>
-        /// 加载配置
-        /// </summary>
-        private void LoadConfiguration()
-        {
-            try
-            {
-                string configPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Rebecca", "media-library.json");
-
-                if (File.Exists(configPath))
-                {
-                    string json = File.ReadAllText(configPath);
-                    _config = JsonUtils.Deserialize<MediaLibraryConfig>(json) ?? new MediaLibraryConfig();
-                }
-
-                _logger.LogInformation($"Loaded media library configuration with {_config.LibraryPaths.Count} paths");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to load media library configuration");
-                _config = new MediaLibraryConfig();
-            }
-        }
-
-        /// <summary>
-        /// 保存配置
-        /// </summary>
-        public void SaveConfiguration()
-        {
-            try
-            {
-                string appDataFolder = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Rebecca");
-
-                if (!Directory.Exists(appDataFolder))
-                {
-                    Directory.CreateDirectory(appDataFolder);
-                }
-
-                string configPath = Path.Combine(appDataFolder, "media-library.json");
-                string json = JsonUtils.Serialize(_config);
-                File.WriteAllText(configPath, json);
-
-                _logger.LogInformation("Saved media library configuration");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to save media library configuration");
-            }
-        }
-
         /// <summary>
         /// 获取配置
         /// </summary>
         public MediaLibraryConfig GetConfig()
         {
-            return _config;
+            var configPath = GetConfigPath();
+            var json = File.ReadAllText(configPath);
+            return JsonUtils.Deserialize<MediaLibraryConfig>(json);
         }
 
         /// <summary>
         /// 更新配置
         /// </summary>
-        public void UpdateConfig(MediaLibraryConfig config)
+        public void SetConfig(MediaLibraryConfig config)
         {
-            _config = config ?? new MediaLibraryConfig();
-            SaveConfiguration();
+            var json = JsonUtils.Serialize(config);
+            var configPath = GetConfigPath();
+            File.WriteAllText(configPath, json);
         }
 
         /// <summary>
         /// 扫描所有媒体库
         /// </summary>
-        public async Task ScanLibrariesAsync(CancellationToken cancellationToken = default)
+        public async Task StartScanAsync(CancellationToken cancellationToken = default)
         {
             if (IsScanning)
             {
@@ -166,7 +83,8 @@ namespace Rebecca.Services
                 IsScanning = true;
                 _scanCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-                foreach (var path in _config.LibraryPaths)
+                var config = GetConfig();
+                foreach (var path in config.LibraryPaths)
                 {
                     if (_scanCancellationTokenSource.Token.IsCancellationRequested)
                     {
@@ -378,10 +296,22 @@ namespace Rebecca.Services
             return _mediaFiles.Values.ToList();
         }
 
-        public override void Dispose()
+        private string GetConfigPath()
+        {
+            var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var rebeccaConfigFolder = Path.Combine(appDataFolder, "Rebecca");
+
+            if (!Directory.Exists(rebeccaConfigFolder))
+            {
+                Directory.CreateDirectory(rebeccaConfigFolder);
+            }
+
+            return Path.Combine(rebeccaConfigFolder, "media-library.json");
+        }
+
+        public void Dispose()
         {
             _httpClient.Dispose();
-            base.Dispose();
         }
     }
 }

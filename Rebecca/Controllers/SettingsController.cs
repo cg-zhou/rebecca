@@ -29,10 +29,9 @@ namespace Rebecca.Controllers
             {
                 var config = await _tmdbSettingsService.GetConfigAsync();
                 
-                // 不返回实际token，只返回是否已配置
                 var safeConfig = new
                 {
-                    bearerToken = !string.IsNullOrEmpty(config.BearerToken) ? "********" : "",
+                    bearerToken = config.BearerToken,
                     baseApiUrl = config.BaseApiUrl,
                     baseImageUrl = config.BaseImageUrl,
                     language = config.Language,

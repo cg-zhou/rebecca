@@ -38,7 +38,7 @@ namespace Rebecca.Controllers
         }
         
         // 更新媒体库配置
-        [HttpPost("config")]
+        [HttpPut("config")]
         public ActionResult UpdateConfig([FromBody] MediaLibraryConfig config)
         {
             try
@@ -49,7 +49,7 @@ namespace Rebecca.Controllers
                     return BadRequest(new { message = "配置不能为空" });
                 }
                 
-                _mediaLibraryService.UpdateConfig(config);
+                _mediaLibraryService.SetConfig(config);
                 return Ok(new { message = "配置已更新" });
             }
             catch (Exception ex)
@@ -78,7 +78,7 @@ namespace Rebecca.Controllers
         
         // 开始扫描
         [HttpPost("scan")]
-        public async Task<ActionResult> StartScan()
+        public ActionResult StartScan()
         {
             try
             {
@@ -89,7 +89,7 @@ namespace Rebecca.Controllers
                 }
                 
                 // 异步启动扫描，不等待完成
-                _ = _mediaLibraryService.ScanLibrariesAsync();
+                _ = _mediaLibraryService.StartScanAsync();
                 
                 return Ok(new { message = "扫描已启动" });
             }
