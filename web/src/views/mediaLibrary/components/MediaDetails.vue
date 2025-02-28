@@ -6,8 +6,18 @@
       </div>
       <div class="media-info">
         <h2>{{ media.title }} <span v-if="media.year">({{ media.year }})</span></h2>
-        <div class="file-path">{{ media.path }}</div>
-        <div class="last-scanned">最后扫描: {{ formatDate(media.lastScanned) }}</div>
+        <div class="info-item">
+          <label>文件路径：</label>
+          <span class="file-path">{{ media.path }}</span>
+        </div>
+        <div class="info-item">
+          <label>最后扫描：</label>
+          <span>{{ formatDate(media.lastScanned) }}</span>
+        </div>
+        <div class="info-item" v-if="media.size">
+          <label>文件大小：</label>
+          <span>{{ formatFileSize(media.size) }}</span>
+        </div>
       </div>
     </div>
   </el-dialog>
@@ -31,7 +41,8 @@ const dialogVisible = computed({
 
 const getPosterUrl = (file: MediaFile) => {
   if (file.posterPath) {
-    return `file://${file.posterPath}`
+    // 使用后端代理接口
+    return `/api/medialibrary/image/${encodeURIComponent(file.posterPath)}`
   }
   return '/images/no-poster.png'
 }
@@ -40,10 +51,24 @@ const formatDate = (dateString: string | null) => {
   if (!dateString) return '未知'
   try {
     const date = new Date(dateString)
-    return date.toLocaleString()
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   } catch {
     return dateString
   }
+}
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 </script>
 
@@ -67,8 +92,18 @@ const formatDate = (dateString: string | null) => {
   flex: 1;
 }
 
+.info-item {
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.info-item label {
+  color: #606266;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
 .file-path {
-  margin-top: 10px;
   color: #606266;
   font-size: 14px;
   word-break: break-all;

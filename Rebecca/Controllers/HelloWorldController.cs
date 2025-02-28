@@ -1,15 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Rebecca.Controllers
+namespace Rebecca.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class HelloWorldController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class HelloWorldController : ControllerBase
+    [HttpGet]
+    public IActionResult Get()
     {
-        [HttpGet]
-        public IActionResult Get()
-        {
-            return Ok("Hello World!");
-        }
+        return Ok("Hello World!");
     }
 }

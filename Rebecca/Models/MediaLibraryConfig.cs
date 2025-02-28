@@ -1,7 +1,6 @@
-namespace Rebecca.Models
+namespace Rebecca.Models;
+
+public class MediaLibraryConfig
 {
-    public class MediaLibraryConfig
-    {
-        public string[] LibraryPaths { get; set; } = Array.Empty<string>();
-    }
+    public string[] LibraryPaths { get; set; } = Array.Empty<string>();
 }

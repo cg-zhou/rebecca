@@ -7,311 +7,310 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Authentication;
 
-namespace Rebecca.Services
+namespace Rebecca.Services;
+
+public class MediaLibraryService : IDisposable
 {
-    public class MediaLibraryService : IDisposable
+    private readonly ILogger<MediaLibraryService> _logger;
+    private readonly ITmdbSettingsService _tmdbSettingsService;
+
+    // 存储所有媒体文件的字典
+    private readonly ConcurrentDictionary<string, MediaFile> _mediaFiles = new ConcurrentDictionary<string, MediaFile>();
+
+    // 支持的视频文件扩展名
+    private static readonly string[] VideoExtensions =
+    [
+        ".mp4", ".mkv", ".avi", ".mov",
+        ".wmv", ".flv", ".m4v", ".rmvb"
+    ];
+
+    // 用于取消当前扫描任务
+    private CancellationTokenSource? _scanCancellationTokenSource;
+
+    private readonly HttpClient _httpClient;
+    private const int MaxRetries = 3;
+
+    public bool IsScanning { get; private set; } = false;
+
+    public MediaLibraryService(ILogger<MediaLibraryService> logger, ITmdbSettingsService tmdbSettingsService)
     {
-        private readonly ILogger<MediaLibraryService> _logger;
-        private readonly ITmdbSettingsService _tmdbSettingsService;
+        _logger = logger;
+        _tmdbSettingsService = tmdbSettingsService;
 
-        // 存储所有媒体文件的字典
-        private readonly ConcurrentDictionary<string, MediaFile> _mediaFiles = new ConcurrentDictionary<string, MediaFile>();
-
-        // 支持的视频文件扩展名
-        private static readonly string[] VideoExtensions =
-        [
-            ".mp4", ".mkv", ".avi", ".mov",
-            ".wmv", ".flv", ".m4v", ".rmvb"
-        ];
-
-        // 用于取消当前扫描任务
-        private CancellationTokenSource? _scanCancellationTokenSource;
-
-        private readonly HttpClient _httpClient;
-        private const int MaxRetries = 3;
-
-        public bool IsScanning { get; private set; } = false;
-
-        public MediaLibraryService(ILogger<MediaLibraryService> logger, ITmdbSettingsService tmdbSettingsService)
+        var handler = new HttpClientHandler
         {
-            _logger = logger;
-            _tmdbSettingsService = tmdbSettingsService;
+            ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true,
+            SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+            CheckCertificateRevocationList = false
+        };
+        _httpClient = new HttpClient(handler);
+        _httpClient.Timeout = TimeSpan.FromMinutes(5);
+    }
 
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true,
-                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                CheckCertificateRevocationList = false
-            };
-            _httpClient = new HttpClient(handler);
-            _httpClient.Timeout = TimeSpan.FromMinutes(5);
+    /// <summary>
+    /// 获取配置
+    /// </summary>
+    public MediaLibraryConfig GetConfig()
+    {
+        var configPath = GetConfigPath();
+        var json = File.ReadAllText(configPath);
+        return JsonUtils.Deserialize<MediaLibraryConfig>(json);
+    }
+
+    /// <summary>
+    /// 更新配置
+    /// </summary>
+    public void SetConfig(MediaLibraryConfig config)
+    {
+        var json = JsonUtils.Serialize(config);
+        var configPath = GetConfigPath();
+        File.WriteAllText(configPath, json);
+    }
+
+    /// <summary>
+    /// 扫描所有媒体库
+    /// </summary>
+    public async Task StartScanAsync(CancellationToken cancellationToken = default)
+    {
+        if (IsScanning)
+        {
+            _logger.LogInformation("A scan is already in progress");
+            return;
         }
 
-        /// <summary>
-        /// 获取配置
-        /// </summary>
-        public MediaLibraryConfig GetConfig()
+        try
         {
-            var configPath = GetConfigPath();
-            var json = File.ReadAllText(configPath);
-            return JsonUtils.Deserialize<MediaLibraryConfig>(json);
-        }
+            IsScanning = true;
+            _scanCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        /// <summary>
-        /// 更新配置
-        /// </summary>
-        public void SetConfig(MediaLibraryConfig config)
-        {
-            var json = JsonUtils.Serialize(config);
-            var configPath = GetConfigPath();
-            File.WriteAllText(configPath, json);
-        }
-
-        /// <summary>
-        /// 扫描所有媒体库
-        /// </summary>
-        public async Task StartScanAsync(CancellationToken cancellationToken = default)
-        {
-            if (IsScanning)
+            var config = GetConfig();
+            foreach (var path in config.LibraryPaths)
             {
-                _logger.LogInformation("A scan is already in progress");
-                return;
-            }
-
-            try
-            {
-                IsScanning = true;
-                _scanCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-                var config = GetConfig();
-                foreach (var path in config.LibraryPaths)
+                if (_scanCancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    if (_scanCancellationTokenSource.Token.IsCancellationRequested)
-                    {
-                        break;
-                    }
+                    break;
+                }
 
-                    if (Directory.Exists(path))
-                    {
-                        await ScanFolderAsync(path, _scanCancellationTokenSource.Token);
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"Library path does not exist: {path}");
-                    }
+                if (Directory.Exists(path))
+                {
+                    await ScanFolderAsync(path, _scanCancellationTokenSource.Token);
+                }
+                else
+                {
+                    _logger.LogWarning($"Library path does not exist: {path}");
                 }
             }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("Scan operation was cancelled");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while scanning libraries");
-            }
-            finally
-            {
-                IsScanning = false;
-                _scanCancellationTokenSource = null;
-            }
         }
-
-        /// <summary>
-        /// 取消当前扫描
-        /// </summary>
-        public void CancelScan()
+        catch (OperationCanceledException)
         {
-            _scanCancellationTokenSource?.Cancel();
+            _logger.LogInformation("Scan operation was cancelled");
         }
-
-        /// <summary>
-        /// 扫描单个文件夹
-        /// </summary>
-        private async Task ScanFolderAsync(string folderPath, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            _logger.LogInformation($"Scanning folder: {folderPath}");
-
-            try
-            {
-                // 获取所有视频文件
-                var videoFiles = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
-                    .Where(f => VideoExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
-
-                foreach (var file in videoFiles)
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    await ProcessVideoFileAsync(file, cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error scanning folder: {folderPath}");
-            }
+            _logger.LogError(ex, "Error occurred while scanning libraries");
         }
-
-        /// <summary>
-        /// 处理单个视频文件
-        /// </summary>
-        private async Task ProcessVideoFileAsync(string filePath, CancellationToken cancellationToken)
+        finally
         {
-            // 如果文件已经在字典中并且状态为已完成，则跳过
-            if (_mediaFiles.TryGetValue(filePath, out var existingFile) && existingFile.Status == MediaFileStatus.Completed)
+            IsScanning = false;
+            _scanCancellationTokenSource = null;
+        }
+    }
+
+    /// <summary>
+    /// 取消当前扫描
+    /// </summary>
+    public void CancelScan()
+    {
+        _scanCancellationTokenSource?.Cancel();
+    }
+
+    /// <summary>
+    /// 扫描单个文件夹
+    /// </summary>
+    private async Task ScanFolderAsync(string folderPath, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation($"Scanning folder: {folderPath}");
+
+        try
+        {
+            // 获取所有视频文件
+            var videoFiles = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                .Where(f => VideoExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+
+            foreach (var file in videoFiles)
             {
-                // 如果文件的修改时间没变，则跳过
-                var fileInfo = new FileInfo(filePath);
-                if (existingFile.LastScanned.HasValue && fileInfo.LastWriteTime <= existingFile.LastScanned.Value)
+                if (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
-            }
 
-            // 创建或更新媒体文件信息
-            var mediaFile = existingFile ?? new MediaFile
-            {
-                Path = filePath,
-                FileName = Path.GetFileName(filePath)
-            };
-
-            try
-            {
-                mediaFile.Status = MediaFileStatus.Scanning;
-                _mediaFiles[filePath] = mediaFile;
-
-                // 从文件名猜测电影名称
-                string movieName = GetMovieName(Path.GetFileNameWithoutExtension(filePath));
-
-                // 更新状态为下载元数据中
-                mediaFile.Status = MediaFileStatus.Downloading;
-                _mediaFiles[filePath] = mediaFile;
-
-                // 获取TMDB配置并创建TmdbUtils实例
-                var config = await _tmdbSettingsService.GetConfigAsync();
-                var tmdbUtils = new TmdbUtils(config);
-
-                // 从TMDB获取电影信息
-                var movieNfo = await tmdbUtils.GetMovieNfo(movieName);
-
-                string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
-                string baseName = Path.GetFileNameWithoutExtension(filePath);
-
-                // 设置本地图片路径
-                string posterPath = Path.Combine(directory, $"{baseName}-poster.jpg");
-                string fanartPath = Path.Combine(directory, $"{baseName}-fanart.jpg");
-                string nfoPath = Path.Combine(directory, $"{baseName}.nfo");
-
-                // 下载海报图片
-                await DownloadImageAsync(movieNfo.Art.Poster, posterPath, cancellationToken);
-
-                // 下载背景图片
-                await DownloadImageAsync(movieNfo.Art.Fanart, fanartPath, cancellationToken);
-
-                // 更新本地路径
-                movieNfo.Art.LocalPoster = posterPath;
-                movieNfo.Art.LocalFanart = fanartPath;
-
-                // 保存NFO文件
-                string nfoXml = XmlUtils.Serialize(movieNfo);
-                File.WriteAllText(nfoPath, nfoXml);
-
-                // 更新媒体文件信息
-                mediaFile.Status = MediaFileStatus.Completed;
-                mediaFile.Title = movieNfo.Title;
-                mediaFile.Year = movieNfo.Year;
-                mediaFile.PosterPath = posterPath;
-                mediaFile.FanartPath = fanartPath;
-                mediaFile.NfoPath = nfoPath;
-                mediaFile.LastScanned = DateTime.Now;
-                _mediaFiles[filePath] = mediaFile;
-
-                _logger.LogInformation($"Successfully processed file: {filePath}");
-            }
-            catch (Exception ex)
-            {
-                mediaFile.Status = MediaFileStatus.Error;
-                mediaFile.ErrorMessage = ex.Message;
-                _mediaFiles[filePath] = mediaFile;
-                _logger.LogError(ex, $"Error processing file: {filePath}");
+                await ProcessVideoFileAsync(file, cancellationToken);
             }
         }
-
-        /// <summary>
-        /// 从文件名猜测电影名称
-        /// </summary>
-        private string GetMovieName(string fileName)
+        catch (Exception ex)
         {
-            return fileName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+            _logger.LogError(ex, $"Error scanning folder: {folderPath}");
         }
+    }
 
-        /// <summary>
-        /// 下载图片
-        /// </summary>
-        private async Task DownloadImageAsync(string url, string localPath, CancellationToken cancellationToken)
+    /// <summary>
+    /// 处理单个视频文件
+    /// </summary>
+    private async Task ProcessVideoFileAsync(string filePath, CancellationToken cancellationToken)
+    {
+        // 如果文件已经在字典中并且状态为已完成，则跳过
+        if (_mediaFiles.TryGetValue(filePath, out var existingFile) && existingFile.Status == MediaFileStatus.Completed)
         {
-            if (string.IsNullOrEmpty(url))
+            // 如果文件的修改时间没变，则跳过
+            var fileInfo = new FileInfo(filePath);
+            if (existingFile.LastScanned.HasValue && fileInfo.LastWriteTime <= existingFile.LastScanned.Value)
             {
                 return;
             }
+        }
 
-            for (int retry = 0; retry < MaxRetries; retry++)
+        // 创建或更新媒体文件信息
+        var mediaFile = existingFile ?? new MediaFile
+        {
+            Path = filePath,
+            FileName = Path.GetFileName(filePath)
+        };
+
+        try
+        {
+            mediaFile.Status = MediaFileStatus.Scanning;
+            _mediaFiles[filePath] = mediaFile;
+
+            // 从文件名猜测电影名称
+            string movieName = GetMovieName(Path.GetFileNameWithoutExtension(filePath));
+
+            // 更新状态为下载元数据中
+            mediaFile.Status = MediaFileStatus.Downloading;
+            _mediaFiles[filePath] = mediaFile;
+
+            // 获取TMDB配置并创建TmdbUtils实例
+            var config = await _tmdbSettingsService.GetConfigAsync();
+            var tmdbUtils = new TmdbUtils(config);
+
+            // 从TMDB获取电影信息
+            var movieNfo = await tmdbUtils.GetMovieNfo(movieName);
+
+            string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
+            string baseName = Path.GetFileNameWithoutExtension(filePath);
+
+            // 设置本地图片路径
+            string posterPath = Path.Combine(directory, $"{baseName}-poster.jpg");
+            string fanartPath = Path.Combine(directory, $"{baseName}-fanart.jpg");
+            string nfoPath = Path.Combine(directory, $"{baseName}.nfo");
+
+            // 下载海报图片
+            await DownloadImageAsync(movieNfo.Art.Poster, posterPath, cancellationToken);
+
+            // 下载背景图片
+            await DownloadImageAsync(movieNfo.Art.Fanart, fanartPath, cancellationToken);
+
+            // 更新本地路径
+            movieNfo.Art.LocalPoster = posterPath;
+            movieNfo.Art.LocalFanart = fanartPath;
+
+            // 保存NFO文件
+            string nfoXml = XmlUtils.Serialize(movieNfo);
+            File.WriteAllText(nfoPath, nfoXml);
+
+            // 更新媒体文件信息
+            mediaFile.Status = MediaFileStatus.Completed;
+            mediaFile.Title = movieNfo.Title;
+            mediaFile.Year = movieNfo.Year;
+            mediaFile.PosterPath = posterPath;
+            mediaFile.FanartPath = fanartPath;
+            mediaFile.NfoPath = nfoPath;
+            mediaFile.LastScanned = DateTime.Now;
+            _mediaFiles[filePath] = mediaFile;
+
+            _logger.LogInformation($"Successfully processed file: {filePath}");
+        }
+        catch (Exception ex)
+        {
+            mediaFile.Status = MediaFileStatus.Error;
+            mediaFile.ErrorMessage = ex.Message;
+            _mediaFiles[filePath] = mediaFile;
+            _logger.LogError(ex, $"Error processing file: {filePath}");
+        }
+    }
+
+    /// <summary>
+    /// 从文件名猜测电影名称
+    /// </summary>
+    private string GetMovieName(string fileName)
+    {
+        return fileName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+    }
+
+    /// <summary>
+    /// 下载图片
+    /// </summary>
+    private async Task DownloadImageAsync(string url, string localPath, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return;
+        }
+
+        for (int retry = 0; retry < MaxRetries; retry++)
+        {
+            try
             {
-                try
-                {
-                    using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                    response.EnsureSuccessStatusCode();
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
 
-                    // 确保目标目录存在
-                    var directory = Path.GetDirectoryName(localPath);
-                    if (!string.IsNullOrEmpty(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                    using var fileStream = File.Create(localPath);
-                    await stream.CopyToAsync(fileStream, cancellationToken);
-                    return; // 下载成功，退出重试循环
-                }
-                catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
+                // 确保目标目录存在
+                var directory = Path.GetDirectoryName(localPath);
+                if (!string.IsNullOrEmpty(directory))
                 {
-                    if (retry == MaxRetries - 1)
-                    {
-                        _logger.LogError(ex, $"Failed to download image after {MaxRetries} attempts. URL: {url}");
-                        throw;
-                    }
-                    _logger.LogWarning($"Download attempt {retry + 1} failed, retrying... URL: {url}");
-                    await Task.Delay(TimeSpan.FromSeconds(2 * (retry + 1)), cancellationToken);
+                    Directory.CreateDirectory(directory);
                 }
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var fileStream = File.Create(localPath);
+                await stream.CopyToAsync(fileStream, cancellationToken);
+                return; // 下载成功，退出重试循环
+            }
+            catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
+            {
+                if (retry == MaxRetries - 1)
+                {
+                    _logger.LogError(ex, $"Failed to download image after {MaxRetries} attempts. URL: {url}");
+                    throw;
+                }
+                _logger.LogWarning($"Download attempt {retry + 1} failed, retrying... URL: {url}");
+                await Task.Delay(TimeSpan.FromSeconds(2 * (retry + 1)), cancellationToken);
             }
         }
+    }
 
-        /// <summary>
-        /// 获取所有媒体文件
-        /// </summary>
-        public IEnumerable<MediaFile> GetAllMediaFiles()
+    /// <summary>
+    /// 获取所有媒体文件
+    /// </summary>
+    public IEnumerable<MediaFile> GetAllMediaFiles()
+    {
+        return _mediaFiles.Values.ToList();
+    }
+
+    private string GetConfigPath()
+    {
+        var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var rebeccaConfigFolder = Path.Combine(appDataFolder, "Rebecca");
+
+        if (!Directory.Exists(rebeccaConfigFolder))
         {
-            return _mediaFiles.Values.ToList();
+            Directory.CreateDirectory(rebeccaConfigFolder);
         }
 
-        private string GetConfigPath()
-        {
-            var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var rebeccaConfigFolder = Path.Combine(appDataFolder, "Rebecca");
+        return Path.Combine(rebeccaConfigFolder, "media-library.json");
+    }
 
-            if (!Directory.Exists(rebeccaConfigFolder))
-            {
-                Directory.CreateDirectory(rebeccaConfigFolder);
-            }
-
-            return Path.Combine(rebeccaConfigFolder, "media-library.json");
-        }
-
-        public void Dispose()
-        {
-            _httpClient.Dispose();
-        }
+    public void Dispose()
+    {
+        _httpClient.Dispose();
     }
 }
