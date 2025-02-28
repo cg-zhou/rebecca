@@ -84,6 +84,9 @@ public class MediaLibraryService : IDisposable
             _scanCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             var config = GetConfig();
+            var filesToProcess = new List<string>();
+
+            // 第一阶段：快速扫描收集所有视频文件
             foreach (var path in config.LibraryPaths)
             {
                 if (_scanCancellationTokenSource.Token.IsCancellationRequested)
@@ -93,12 +96,38 @@ public class MediaLibraryService : IDisposable
 
                 if (Directory.Exists(path))
                 {
-                    await ScanFolderAsync(path, _scanCancellationTokenSource.Token);
+                    var files = CollectVideoFiles(path);
+                    filesToProcess.AddRange(files);
+
+                    // 快速添加到媒体文件列表，仅基本信息
+                    foreach (var file in files)
+                    {
+                        if (!_mediaFiles.ContainsKey(file))
+                        {
+                            _mediaFiles[file] = new MediaFile
+                            {
+                                Path = file,
+                                FileName = Path.GetFileName(file),
+                                Status = MediaFileStatus.Pending
+                            };
+                        }
+                    }
                 }
                 else
                 {
                     _logger.LogWarning($"Library path does not exist: {path}");
                 }
+            }
+
+            // 第二阶段：处理每个文件的详细信息
+            foreach (var file in filesToProcess)
+            {
+                if (_scanCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                await ProcessVideoFileAsync(file, _scanCancellationTokenSource.Token);
             }
         }
         catch (OperationCanceledException)
@@ -113,6 +142,21 @@ public class MediaLibraryService : IDisposable
         {
             IsScanning = false;
             _scanCancellationTokenSource = null;
+        }
+    }
+
+    private IEnumerable<string> CollectVideoFiles(string folderPath)
+    {
+        _logger.LogInformation($"Collecting video files from: {folderPath}");
+        try
+        {
+            return Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                .Where(f => VideoExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error collecting files from folder: {folderPath}");
+            return Enumerable.Empty<string>();
         }
     }
 
