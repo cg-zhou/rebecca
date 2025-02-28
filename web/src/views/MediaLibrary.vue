@@ -111,6 +111,16 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
+interface MediaFile {
+  fileName: string
+  title: string
+  year?: string
+  path: string
+  lastScanned: string | null
+  status: string
+  posterPath?: string
+}
+
 // 媒体库配置
 const config = reactive({
   libraryPaths: [] as string[],
@@ -120,13 +130,13 @@ const config = reactive({
 })
 
 // 媒体文件列表
-const mediaFiles = ref<any[]>([])
+const mediaFiles = ref<MediaFile[]>([])
 const isScanning = ref(false)
 const isLoading = ref(false)
 
 // 详情对话框
 const detailsVisible = ref(false)
-const selectedFile = ref(null)
+const selectedFile = ref<MediaFile | null>(null)
 
 // 计算属性：是否有媒体库路径
 const hasLibraryPaths = computed(() => {
@@ -280,19 +290,19 @@ const cancelScan = async () => {
 }
 
 // 查看详情
-const viewDetails = (file: any) => {
+const viewDetails = (file: MediaFile) => {
   selectedFile.value = file
   detailsVisible.value = true
 }
 
 // 重新处理文件
-const reprocess = async (file: any) => {
+const reprocess = async (file: MediaFile) => {
   // TODO: 实现重新处理单个文件的功能
   showInfo('此功能尚未实现')
 }
 
 // 获取海报URL
-const getPosterUrl = (file: any) => {
+const getPosterUrl = (file: MediaFile) => {
   if (file.posterPath) {
     return `file://${file.posterPath}`
   }
