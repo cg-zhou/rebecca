@@ -83,6 +83,7 @@ public class WebHostService
             });
             builder.Services.AddSingleton<ITmdbSettingsService, TmdbSettingsService>();
             builder.Services.AddSingleton<TmdbUtils>();
+            builder.Services.AddSingleton<MediaLibraryConfigService>();
             builder.Services.AddSingleton<MediaLibraryService>();
 
             _app = builder.Build();

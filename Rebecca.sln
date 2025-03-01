@@ -11,8 +11,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StdEx", "StdEx\StdEx.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StdEx.Tests", "StdEx.Tests\StdEx.Tests.csproj", "{C6D5A520-E451-4ADB-AF00-81FE524DB538}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StdEx.TmdbNfoLoader", "StdEx.TmdbNfoLoader\StdEx.TmdbNfoLoader.csproj", "{A311759F-1A0C-4DAA-AF60-04A8E26D80FC}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,10 +35,6 @@ Global
 		{C6D5A520-E451-4ADB-AF00-81FE524DB538}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6D5A520-E451-4ADB-AF00-81FE524DB538}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C6D5A520-E451-4ADB-AF00-81FE524DB538}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A311759F-1A0C-4DAA-AF60-04A8E26D80FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A311759F-1A0C-4DAA-AF60-04A8E26D80FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A311759F-1A0C-4DAA-AF60-04A8E26D80FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A311759F-1A0C-4DAA-AF60-04A8E26D80FC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

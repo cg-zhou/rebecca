@@ -13,6 +13,7 @@ public class MediaLibraryService : IDisposable
 {
     private readonly ILogger<MediaLibraryService> _logger;
     private readonly ITmdbSettingsService _tmdbSettingsService;
+    private readonly MediaLibraryConfigService _configService;
 
     // 存储所有媒体文件的字典
     private readonly ConcurrentDictionary<string, MediaFile> _mediaFiles = new ConcurrentDictionary<string, MediaFile>();
@@ -32,10 +33,14 @@ public class MediaLibraryService : IDisposable
 
     public bool IsScanning { get; private set; } = false;
 
-    public MediaLibraryService(ILogger<MediaLibraryService> logger, ITmdbSettingsService tmdbSettingsService)
+    public MediaLibraryService(
+        ILogger<MediaLibraryService> logger, 
+        ITmdbSettingsService tmdbSettingsService,
+        MediaLibraryConfigService configService)
     {
         _logger = logger;
         _tmdbSettingsService = tmdbSettingsService;
+        _configService = configService;
 
         var handler = new HttpClientHandler
         {
@@ -52,9 +57,7 @@ public class MediaLibraryService : IDisposable
     /// </summary>
     public MediaLibraryConfig GetConfig()
     {
-        var configPath = GetConfigPath();
-        var json = File.ReadAllText(configPath);
-        return JsonUtils.Deserialize<MediaLibraryConfig>(json);
+        return _configService.GetConfig();
     }
 
     /// <summary>
@@ -62,9 +65,7 @@ public class MediaLibraryService : IDisposable
     /// </summary>
     public void SetConfig(MediaLibraryConfig config)
     {
-        var json = JsonUtils.Serialize(config);
-        var configPath = GetConfigPath();
-        File.WriteAllText(configPath, json);
+        _configService.SetConfig(config);
     }
 
     /// <summary>
@@ -338,19 +339,6 @@ public class MediaLibraryService : IDisposable
     public IEnumerable<MediaFile> GetAllMediaFiles()
     {
         return _mediaFiles.Values.ToList();
-    }
-
-    private string GetConfigPath()
-    {
-        var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var rebeccaConfigFolder = Path.Combine(appDataFolder, "Rebecca");
-
-        if (!Directory.Exists(rebeccaConfigFolder))
-        {
-            Directory.CreateDirectory(rebeccaConfigFolder);
-        }
-
-        return Path.Combine(rebeccaConfigFolder, "media-library.json");
     }
 
     public void Dispose()
