@@ -1,5 +1,3 @@
-using System;
-
 namespace Rebecca.Models;
 
 public class MediaFile

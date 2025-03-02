@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebecca.Services;
-using StdEx.Media.Tmdb;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;

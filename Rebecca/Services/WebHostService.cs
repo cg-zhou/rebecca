@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using StdEx.IO;
 using StdEx.Media.Tmdb;
 using StdEx.Net;
-using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;

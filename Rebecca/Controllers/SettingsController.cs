@@ -2,9 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Rebecca.Models;
 using Rebecca.Services;
-using StdEx.Media.Tmdb.Models;
-using System;
-using System.Threading.Tasks;
 
 namespace Rebecca.Controllers;
 

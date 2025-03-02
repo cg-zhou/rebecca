@@ -11,12 +11,14 @@
       <div class="paths-config">
         <div class="path-list">
           <div v-for="(path, index) in config.libraryPaths" :key="index" class="path-item">
-            <el-input v-model="config.libraryPaths[index]" placeholder="请输入媒体库路径">
-              <template #append>
-                <el-button @click="selectFolder(index)">选择</el-button>
-                <el-button @click="removePath(index)">删除</el-button>
-              </template>
-            </el-input>
+            <div class="path-input-group">
+              <el-input v-model="config.libraryPaths[index]" placeholder="请输入媒体库路径" />
+              <div class="path-buttons">
+                <el-button @click="selectFolder(index)" type="primary" plain>选择</el-button>
+                <el-button @click="openFolder(index)" type="primary" plain>打开</el-button>
+                <el-button @click="confirmRemovePath(index)" type="danger" plain>删除</el-button>
+              </div>
+            </div>
           </div>
         </div>
         <el-button @click="addPath">添加路径</el-button>
@@ -81,7 +83,7 @@
 
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface Config {
   libraryPaths: string[]
@@ -135,11 +137,29 @@ const removePath = (index: number) => {
   config.libraryPaths.splice(index, 1)
 }
 
+const confirmRemovePath = (index: number) => {
+  const path = config.libraryPaths[index]
+  ElMessageBox.confirm(
+    path ? `确定要删除路径 "${path}" 吗？` : '确定要删除这个空路径吗？',
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      removePath(index)
+      ElMessage.success('已删除')
+    })
+    .catch(() => {
+      // 用户点击取消，不做任何操作
+    })
+}
+
 const selectFolder = async (index: number) => {
   try {
-    const response = await fetch('/api/system/selectFolder', {
-      method: 'POST'
-    })
+    const response = await fetch('/api/folder/select')
     const data = await response.json()
     if (data.path) {
       config.libraryPaths[index] = data.path
@@ -147,6 +167,33 @@ const selectFolder = async (index: number) => {
   } catch (error) {
     console.error('选择文件夹失败:', error)
     ElMessage.error('选择文件夹失败')
+  }
+}
+
+// 打开文件夹
+const openFolder = async (index: number) => {
+  const path = config.libraryPaths[index]
+  if (!path) {
+    ElMessage.warning('路径不能为空')
+    return
+  }
+
+  try {
+    const response = await fetch('/api/folder/open', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ path })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || '打开文件夹失败')
+    }
+  } catch (error) {
+    console.error('打开文件夹失败:', error)
+    ElMessage.error(error instanceof Error ? error.message : '打开文件夹失败')
   }
 }
 
@@ -270,5 +317,33 @@ const testTmdbApi = async () => {
 
 .tmdb-config {
   max-width: 600px;
+}
+
+.path-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.path-input-group .el-input {
+  flex-grow: 1;
+}
+
+.path-buttons {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.path-buttons .el-divider {
+  margin: 0 4px;
+  height: 16px;
+}
+
+/* 删除之前的按钮相关样式 */
+.path-input-group .el-input-group__append,
+.el-button-group .el-button,
+.el-button [class*='el-icon'] + span {
+  display: none;
 }
 </style>

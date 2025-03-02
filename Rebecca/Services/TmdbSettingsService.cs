@@ -3,9 +3,7 @@ using Rebecca.Models;
 using StdEx.Media.Tmdb;
 using StdEx.Media.Tmdb.Models;
 using StdEx.Serialization;
-using System;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace Rebecca.Services;
 
