@@ -53,6 +53,7 @@ public partial class App : Application
         
         _services.AddSingleton<WebHostService>();
         _services.AddSingleton<MainWindow>();
+        _services.AddSingleton<WebSocketHub>();
         _services.AddSingleton<MediaLibraryConfigService>();
         _services.AddSingleton<ITmdbSettingsService, TmdbSettingsService>();
         _services.AddSingleton<MediaLibraryService>();

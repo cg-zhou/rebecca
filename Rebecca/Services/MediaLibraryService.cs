@@ -14,6 +14,7 @@ public class MediaLibraryService : IDisposable
     private readonly ILogger<MediaLibraryService> _logger;
     private readonly ITmdbSettingsService _tmdbSettingsService;
     private readonly MediaLibraryConfigService _configService;
+    private readonly WebSocketHub _webSocketHub;
 
     // 存储所有媒体文件的字典
     private readonly ConcurrentDictionary<string, MediaFile> _mediaFiles = new ConcurrentDictionary<string, MediaFile>();
@@ -36,11 +37,13 @@ public class MediaLibraryService : IDisposable
     public MediaLibraryService(
         ILogger<MediaLibraryService> logger, 
         ITmdbSettingsService tmdbSettingsService,
-        MediaLibraryConfigService configService)
+        MediaLibraryConfigService configService,
+        WebSocketHub webSocketHub)
     {
         _logger = logger;
         _tmdbSettingsService = tmdbSettingsService;
         _configService = configService;
+        _webSocketHub = webSocketHub;
 
         var handler = new HttpClientHandler
         {
@@ -82,6 +85,8 @@ public class MediaLibraryService : IDisposable
         try
         {
             IsScanning = true;
+            await _webSocketHub.BroadcastMessage(WebSocketEventType.ScanStatus, new { isScanning = true });
+            
             _scanCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             var config = GetConfig();
@@ -105,12 +110,16 @@ public class MediaLibraryService : IDisposable
                     {
                         if (!_mediaFiles.ContainsKey(file))
                         {
-                            _mediaFiles[file] = new MediaFile
+                            var mediaFile = new MediaFile
                             {
                                 Path = file,
                                 FileName = Path.GetFileName(file),
-                                Status = MediaFileStatus.Pending
+                                Status = MediaFileStatus.Pending,
+                                Size = new FileInfo(file).Length
                             };
+                            _mediaFiles[file] = mediaFile;
+                            // 使用 await 确保消息被发送
+                            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
                         }
                     }
                 }
@@ -138,11 +147,13 @@ public class MediaLibraryService : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while scanning libraries");
+            await _webSocketHub.BroadcastMessage(WebSocketEventType.Error, new { message = "扫描过程发生错误" });
         }
         finally
         {
             IsScanning = false;
             _scanCancellationTokenSource = null;
+            await _webSocketHub.BroadcastMessage(WebSocketEventType.ScanStatus, new { isScanning = false });
         }
     }
 
@@ -225,6 +236,7 @@ public class MediaLibraryService : IDisposable
         {
             mediaFile.Status = MediaFileStatus.Scanning;
             _mediaFiles[filePath] = mediaFile;
+            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
 
             // 从文件名猜测电影名称
             string movieName = GetMovieName(Path.GetFileNameWithoutExtension(filePath));
@@ -271,6 +283,7 @@ public class MediaLibraryService : IDisposable
             mediaFile.NfoPath = nfoPath;
             mediaFile.LastScanned = DateTime.Now;
             _mediaFiles[filePath] = mediaFile;
+            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
 
             _logger.LogInformation($"Successfully processed file: {filePath}");
         }
@@ -279,6 +292,7 @@ public class MediaLibraryService : IDisposable
             mediaFile.Status = MediaFileStatus.Error;
             mediaFile.ErrorMessage = ex.Message;
             _mediaFiles[filePath] = mediaFile;
+            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
             _logger.LogError(ex, $"Error processing file: {filePath}");
         }
     }

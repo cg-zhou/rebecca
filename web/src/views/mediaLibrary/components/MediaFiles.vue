@@ -47,11 +47,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import MediaDetails from './MediaDetails.vue'
 import type { MediaFile } from '@/views/mediaLibrary/types'
+import type { WebSocketScanStatus, WebSocketErrorMessage } from '@/types/websocket'
+import { WebSocketEventType } from '@/types/websocket'
 import { mediaLibraryApi } from '@/api/api'
+import { webSocketService } from '@/services/websocketInstance'
 
 const mediaFiles = ref<MediaFile[]>([])
 const isLoading = ref(false)
@@ -59,9 +62,49 @@ const isScanning = ref(false)
 const detailsVisible = ref(false)
 const selectedFile = ref<MediaFile | null>(null)
 
+// 处理扫描状态变更
+const handleScanStatus = (data: WebSocketScanStatus) => {
+  isScanning.value = data.isScanning
+  if (!data.isScanning) {
+    refreshMediaFiles()
+  }
+}
+
+// 处理文件状态变更
+const handleFileStatus = (file: MediaFile) => {
+  const index = mediaFiles.value.findIndex(f => f.path === file.path)
+  if (index >= 0) {
+    // 使用数组解构确保视图更新
+    mediaFiles.value = [
+      ...mediaFiles.value.slice(0, index),
+      file,
+      ...mediaFiles.value.slice(index + 1)
+    ]
+  } else {
+    // 添加新文件到列表开头
+    mediaFiles.value = [file, ...mediaFiles.value]
+  }
+}
+
+// 处理错误消息
+const handleError = (data: WebSocketErrorMessage) => {
+  ElMessage.error(data.message)
+}
+
 onMounted(async () => {
   await refreshMediaFiles()
-  setInterval(checkScanStatus, 3000)
+  
+  // 订阅 WebSocket 消息
+  webSocketService.subscribe<WebSocketScanStatus>(WebSocketEventType.ScanStatus, handleScanStatus)
+  webSocketService.subscribe<MediaFile>(WebSocketEventType.FileStatus, handleFileStatus)
+  webSocketService.subscribe<WebSocketErrorMessage>(WebSocketEventType.Error, handleError)
+})
+
+onUnmounted(() => {
+  // 取消订阅
+  webSocketService.unsubscribe(WebSocketEventType.ScanStatus, handleScanStatus)
+  webSocketService.unsubscribe(WebSocketEventType.FileStatus, handleFileStatus)
+  webSocketService.unsubscribe(WebSocketEventType.Error, handleError)
 })
 
 const getStatusType = (status: string) => {
@@ -132,18 +175,6 @@ const cancelScan = async () => {
   } catch (error) {
     console.error('取消扫描失败:', error)
     ElMessage.error('取消扫描失败')
-  }
-}
-
-const checkScanStatus = async () => {
-  try {
-    const { isScanning: scanning } = await mediaLibraryApi.getScanStatus()
-    isScanning.value = scanning
-    if (!scanning) {
-      await refreshMediaFiles()
-    }
-  } catch (error) {
-    console.error('获取扫描状态失败:', error)
   }
 }
 </script>

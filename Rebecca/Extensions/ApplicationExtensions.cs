@@ -13,7 +13,9 @@ public static class ApplicationExtensions
         {
             try
             {
-                if (context.Request.Path.ToString().StartsWith("/api"))
+                // 不代理 WebSocket 和 API 请求
+                if (context.Request.Path.ToString().StartsWith("/ws") ||
+                    context.Request.Path.ToString().StartsWith("/api"))
                 {
                     await next(context);
                     return;

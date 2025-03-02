@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Rebecca.Controllers;
 using StdEx.IO;
 using StdEx.Media.Tmdb;
 using StdEx.Net;
@@ -68,9 +69,10 @@ public class WebHostService
                 options.AddDefaultPolicy(
                     policy =>
                     {
-                        policy.AllowAnyOrigin()
+                        policy.SetIsOriginAllowed(_ => true) // 允许所有来源，包括 WebSocket
                               .AllowAnyHeader()
-                              .AllowAnyMethod();
+                              .AllowAnyMethod()
+                              .AllowCredentials(); // 这对 WebSocket 连接是必需的
                     });
             });
 
@@ -83,9 +85,28 @@ public class WebHostService
             builder.Services.AddSingleton<ITmdbSettingsService, TmdbSettingsService>();
             builder.Services.AddSingleton<TmdbUtils>();
             builder.Services.AddSingleton<MediaLibraryConfigService>();
+            builder.Services.AddSingleton<WebSocketHub>();
+            builder.Services.AddSingleton<WebSocketController>();
             builder.Services.AddSingleton<MediaLibraryService>();
 
             _app = builder.Build();
+
+            _app.UseRouting();
+            _app.UseCors();
+
+            // 添加WebSocket支持
+            var webSocketOptions = new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromMinutes(2)
+            };
+            _app.UseWebSockets(webSocketOptions);
+
+            // 映射 WebSocket 路由
+            _app.Map("/ws", async context =>
+            {
+                var controller = context.RequestServices.GetRequiredService<WebSocketController>();
+                await controller.HandleWebSocket(context);
+            });
 
             // 添加详细的错误处理中间件
             _app.UseExceptionHandler(appError =>
@@ -111,8 +132,6 @@ public class WebHostService
                     }
                 });
             });
-
-            _app.UseCors();
 
             if (IsDebugMode)
             {
@@ -158,7 +177,6 @@ public class WebHostService
                 }
             }
 
-            _app.UseRouting();
             _app.MapControllers();
 
             await _app.StartAsync();

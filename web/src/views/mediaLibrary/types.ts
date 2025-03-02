@@ -3,7 +3,7 @@ export interface MediaFile {
     path: string;
     fileName: string;
     status: string;
-    lastScanned?: Date;
+    lastScanned?: string;  // 修改为 string 类型，因为从后端接收到的是 ISO 日期字符串
     title?: string;
     year?: number;
     posterPath?: string;

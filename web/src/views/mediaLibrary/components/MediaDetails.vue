@@ -47,9 +47,10 @@ const getPosterUrl = (file: MediaFile) => {
   return '/images/no-poster.png'
 }
 
-const formatDate = (date: Date | undefined) => {
+const formatDate = (date: Date | string | undefined) => {
   if (!date) return '未知'
-  return date.toLocaleDateString('zh-CN', {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return dateObj.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

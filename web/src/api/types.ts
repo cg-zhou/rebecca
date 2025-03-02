@@ -4,7 +4,7 @@ export interface MediaFile {
     fileName: string;
     path: string;
     status: string;
-    lastScanned?: Date;
+    lastScanned?: string;
     title?: string;
     year?: number;
     posterPath?: string;
