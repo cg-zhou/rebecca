@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Rebecca.Core.WebSockets;
 using Rebecca.Models;
 using StdEx.Media.Tmdb;
 using StdEx.Serialization;
@@ -85,7 +86,7 @@ public class MediaLibraryService : IDisposable
         try
         {
             IsScanning = true;
-            await _webSocketHub.BroadcastMessage(WebSocketEventType.ScanStatus, new { isScanning = true });
+            await _webSocketHub.BroadcastMessage(MessageType.ScanStatus, new { isScanning = true });
             
             _scanCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -119,7 +120,7 @@ public class MediaLibraryService : IDisposable
                             };
                             _mediaFiles[file] = mediaFile;
                             // 使用 await 确保消息被发送
-                            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
+                            await _webSocketHub.BroadcastMessage(MessageType.FileStatus, mediaFile);
                         }
                     }
                 }
@@ -147,13 +148,13 @@ public class MediaLibraryService : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while scanning libraries");
-            await _webSocketHub.BroadcastMessage(WebSocketEventType.Error, new { message = "扫描过程发生错误" });
+            await _webSocketHub.BroadcastMessage(MessageType.Error, new { message = "扫描过程发生错误" });
         }
         finally
         {
             IsScanning = false;
             _scanCancellationTokenSource = null;
-            await _webSocketHub.BroadcastMessage(WebSocketEventType.ScanStatus, new { isScanning = false });
+            await _webSocketHub.BroadcastMessage(MessageType.ScanStatus, new { isScanning = false });
         }
     }
 
@@ -236,7 +237,7 @@ public class MediaLibraryService : IDisposable
         {
             mediaFile.Status = MediaFileStatus.Scanning;
             _mediaFiles[filePath] = mediaFile;
-            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
+            await _webSocketHub.BroadcastMessage(MessageType.FileStatus, mediaFile);
 
             // 从文件名猜测电影名称
             string movieName = GetMovieName(Path.GetFileNameWithoutExtension(filePath));
@@ -283,7 +284,7 @@ public class MediaLibraryService : IDisposable
             mediaFile.NfoPath = nfoPath;
             mediaFile.LastScanned = DateTime.Now;
             _mediaFiles[filePath] = mediaFile;
-            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
+            await _webSocketHub.BroadcastMessage(MessageType.FileStatus, mediaFile);
 
             _logger.LogInformation($"Successfully processed file: {filePath}");
         }
@@ -292,7 +293,7 @@ public class MediaLibraryService : IDisposable
             mediaFile.Status = MediaFileStatus.Error;
             mediaFile.ErrorMessage = ex.Message;
             _mediaFiles[filePath] = mediaFile;
-            await _webSocketHub.BroadcastMessage(WebSocketEventType.FileStatus, mediaFile);
+            await _webSocketHub.BroadcastMessage(MessageType.FileStatus, mediaFile);
             _logger.LogError(ex, $"Error processing file: {filePath}");
         }
     }

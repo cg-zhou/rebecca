@@ -1,11 +1,10 @@
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
-using Rebecca.Models;
 
-namespace Rebecca.Services;
+namespace Rebecca.Core.WebSockets;
 
 public class WebSocketHub
 {
@@ -63,7 +62,7 @@ public class WebSocketHub
                 {
                     if (socket.State == WebSocketState.Open)
                     {
-                        await socket.SendAsync(segment, System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                        await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
                     }
                     else
                     {

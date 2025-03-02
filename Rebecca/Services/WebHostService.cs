@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Rebecca.Controllers;
+using Rebecca.Core.WebSockets;
 using StdEx.IO;
 using StdEx.Media.Tmdb;
 using StdEx.Net;
@@ -56,7 +56,7 @@ public class WebHostService
             _logger.LogInformation($"Selected port: {Port}");
 
             builder.WebHost.UseUrls($"http://localhost:{Port}");
-            
+
             // 配置控制器和日志服务
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
@@ -77,7 +77,7 @@ public class WebHostService
             });
 
             // 注册应用服务
-            builder.Services.AddLogging(configure => 
+            builder.Services.AddLogging(configure =>
             {
                 configure.AddConsole();
                 configure.AddDebug();
@@ -86,7 +86,7 @@ public class WebHostService
             builder.Services.AddSingleton<TmdbUtils>();
             builder.Services.AddSingleton<MediaLibraryConfigService>();
             builder.Services.AddSingleton<WebSocketHub>();
-            builder.Services.AddSingleton<WebSocketController>();
+            builder.Services.AddSingleton<WebSocketService>();
             builder.Services.AddSingleton<MediaLibraryService>();
 
             _app = builder.Build();
@@ -104,8 +104,8 @@ public class WebHostService
             // 映射 WebSocket 路由
             _app.Map("/ws", async context =>
             {
-                var controller = context.RequestServices.GetRequiredService<WebSocketController>();
-                await controller.HandleWebSocket(context);
+                var connector = context.RequestServices.GetRequiredService<WebSocketService>();
+                await connector.HandleWebSocket(context);
             });
 
             // 添加详细的错误处理中间件

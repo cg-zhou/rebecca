@@ -1,22 +1,18 @@
-using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Rebecca.Services;
+using System.Net.WebSockets;
 
-namespace Rebecca.Controllers;
+namespace Rebecca.Core.WebSockets;
 
-public class WebSocketController
+public class WebSocketService
 {
     private readonly WebSocketHub _webSocketHub;
-    private readonly ILogger<WebSocketController> _logger;
 
-    public WebSocketController(WebSocketHub webSocketHub, ILogger<WebSocketController> logger)
+    public WebSocketService(WebSocketHub webSocketHub)
     {
         _webSocketHub = webSocketHub;
-        _logger = logger;
     }
 
-    public async Task HandleWebSocket(Microsoft.AspNetCore.Http.HttpContext context)
+    public async Task HandleWebSocket(HttpContext context)
     {
         if (context.WebSockets.IsWebSocketRequest)
         {
@@ -38,7 +34,7 @@ public class WebSocketController
 
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, 
+                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                                 "Closing as per client request", CancellationToken.None);
                             break;
                         }

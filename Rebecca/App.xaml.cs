@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Rebecca.Core.WebSockets;
 using Rebecca.Services;
 using System.IO;
 using System.Windows;
