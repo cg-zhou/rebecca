@@ -50,7 +50,8 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import MediaDetails from './MediaDetails.vue'
-import type { MediaFile } from '../types'
+import type { MediaFile } from '@/views/mediaLibrary/types'
+import { mediaLibraryApi } from '@/api/api'
 
 const mediaFiles = ref<MediaFile[]>([])
 const isLoading = ref(false)
@@ -88,9 +89,7 @@ const getStatusText = (status: string) => {
 const refreshMediaFiles = async () => {
   isLoading.value = true
   try {
-    const response = await fetch('/api/medialibrary/files')
-    const data = await response.json()
-    mediaFiles.value = data || []
+    mediaFiles.value = await mediaLibraryApi.getMediaFiles()
   } catch (error) {
     console.error('获取媒体文件失败:', error)
     ElMessage.error('获取媒体文件失败')
@@ -106,9 +105,7 @@ const viewDetails = (file: MediaFile) => {
 
 const reprocess = async (file: MediaFile) => {
   try {
-    await fetch(`/api/medialibrary/files/${encodeURIComponent(file.path)}/reprocess`, {
-      method: 'POST'
-    })
+    await mediaLibraryApi.reprocessFile(file.path)
     ElMessage.success('重新处理已开始')
     await refreshMediaFiles()
   } catch (error) {
@@ -119,13 +116,9 @@ const reprocess = async (file: MediaFile) => {
 
 const startScan = async () => {
   try {
-    const response = await fetch('/api/medialibrary/scan', { method: 'POST' })
-    if (response.ok) {
-      ElMessage.success('扫描已启动')
-      isScanning.value = true
-    } else {
-      throw new Error('启动扫描失败')
-    }
+    await mediaLibraryApi.startScan()
+    ElMessage.success('扫描已启动')
+    isScanning.value = true
   } catch (error) {
     console.error('启动扫描失败:', error)
     ElMessage.error('启动扫描失败')
@@ -134,12 +127,8 @@ const startScan = async () => {
 
 const cancelScan = async () => {
   try {
-    const response = await fetch('/api/medialibrary/scan/cancel', { method: 'POST' })
-    if (response.ok) {
-      ElMessage.success('扫描已取消')
-    } else {
-      throw new Error('取消扫描失败')
-    }
+    await mediaLibraryApi.cancelScan()
+    ElMessage.success('扫描已取消')
   } catch (error) {
     console.error('取消扫描失败:', error)
     ElMessage.error('取消扫描失败')
@@ -148,10 +137,9 @@ const cancelScan = async () => {
 
 const checkScanStatus = async () => {
   try {
-    const response = await fetch('/api/medialibrary/scan/status')
-    const data = await response.json()
-    isScanning.value = data.isScanning
-    if (!isScanning.value) {
+    const { isScanning: scanning } = await mediaLibraryApi.getScanStatus()
+    isScanning.value = scanning
+    if (!scanning) {
       await refreshMediaFiles()
     }
   } catch (error) {

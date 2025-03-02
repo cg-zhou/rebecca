@@ -25,7 +25,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MediaFile } from '../types'
+import type { MediaFile } from '@/views/mediaLibrary/types'
+import { mediaLibraryApi } from '@/api/api'
 
 const props = defineProps<{
   modelValue: boolean
@@ -41,26 +42,20 @@ const dialogVisible = computed({
 
 const getPosterUrl = (file: MediaFile) => {
   if (file.posterPath) {
-    // 使用后端代理接口
-    return `/api/medialibrary/image/${encodeURIComponent(file.posterPath)}`
+    return mediaLibraryApi.getImageUrl(file.posterPath)
   }
   return '/images/no-poster.png'
 }
 
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '未知'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch {
-    return dateString
-  }
+const formatDate = (date: Date | undefined) => {
+  if (!date) return '未知'
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const formatFileSize = (bytes: number) => {

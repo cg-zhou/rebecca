@@ -13,6 +13,7 @@ public class MediaFile
     public string? FanartPath { get; set; }
     public string? NfoPath { get; set; }
     public string? ErrorMessage { get; set; }
+    public long Size { get; set; }
 }
 
 // 媒体文件状态枚举

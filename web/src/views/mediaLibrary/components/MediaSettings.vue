@@ -84,23 +84,32 @@
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { MediaLibraryConfig } from '@/views/mediaLibrary/types'
+import type { TmdbConfigRequest } from '@/api/types'
+import { mediaLibraryApi, settingsApi, folderApi } from '@/api/api'
 
-interface Config {
-  libraryPaths: string[]
-  tmdbApiKey: string
-  tmdbLanguage: string
-}
-
-const config = reactive<Config>({
+const config = reactive<MediaLibraryConfig>({
   libraryPaths: [],
   tmdbApiKey: '',
   tmdbLanguage: 'zh-CN'
 })
 
+const tmdbConfig = reactive<TmdbConfigRequest>({
+  bearerToken: '',
+  baseApiUrl: 'http://api.tmdb.org/3',
+  baseImageUrl: 'https://image.tmdb.org/t/p/original',
+  language: 'zh-CN',
+  apiKeyType: 'v3' as 'v3' | 'v4'
+})
+
+onMounted(async () => {
+  await loadConfig()
+  await loadTmdbSettings()
+})
+
 const loadConfig = async () => {
   try {
-    const response = await fetch('/api/medialibrary/config')
-    const data = await response.json()
+    const data = await mediaLibraryApi.getConfig()
     Object.assign(config, data)
   } catch (error) {
     console.error('加载配置失败:', error)
@@ -110,19 +119,8 @@ const loadConfig = async () => {
 
 const saveConfig = async () => {
   try {
-    const response = await fetch('/api/medialibrary/config', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(config)
-    })
-    
-    if (response.ok) {
-      ElMessage.success('设置已保存')
-    } else {
-      throw new Error('保存失败')
-    }
+    await mediaLibraryApi.updateConfig(config)
+    ElMessage.success('设置已保存')
   } catch (error) {
     console.error('保存配置失败:', error)
     ElMessage.error('保存配置失败')
@@ -159,10 +157,9 @@ const confirmRemovePath = (index: number) => {
 
 const selectFolder = async (index: number) => {
   try {
-    const response = await fetch('/api/folder/select')
-    const data = await response.json()
-    if (data.path) {
-      config.libraryPaths[index] = data.path
+    const result = await folderApi.selectFolder()
+    if (result.success && result.path) {
+      config.libraryPaths[index] = result.path
     }
   } catch (error) {
     console.error('选择文件夹失败:', error)
@@ -170,7 +167,6 @@ const selectFolder = async (index: number) => {
   }
 }
 
-// 打开文件夹
 const openFolder = async (index: number) => {
   const path = config.libraryPaths[index]
   if (!path) {
@@ -179,44 +175,17 @@ const openFolder = async (index: number) => {
   }
 
   try {
-    const response = await fetch('/api/folder/open', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ path })
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || '打开文件夹失败')
-    }
+    await folderApi.openFolder(path)
   } catch (error) {
     console.error('打开文件夹失败:', error)
     ElMessage.error(error instanceof Error ? error.message : '打开文件夹失败')
   }
 }
 
-// TMDB 配置
-const tmdbConfig = reactive({
-  bearerToken: '',
-  baseApiUrl: 'http://api.tmdb.org/3',
-  baseImageUrl: 'https://image.tmdb.org/t/p/original',
-  language: 'zh-CN',
-  apiKeyType: 'v3'
-})
-
-onMounted(async () => {
-  await loadConfig()
-  await loadTmdbSettings()
-})
-
 // 加载 TMDB 配置
 const loadTmdbSettings = async () => {
   try {
-    const response = await fetch('/api/settings/tmdb')
-    const data = await response.json()
-
+    const data = await settingsApi.getTmdbConfig()
     if (data) {
       Object.assign(tmdbConfig, data)
     }
@@ -234,19 +203,8 @@ const saveTmdbConfig = async () => {
   }
   
   try {
-    const response = await fetch('/api/settings/tmdb', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(tmdbConfig)
-    })
-
-    if (response.ok) {
-      ElMessage.success('TMDB 配置保存成功')
-    } else {
-      ElMessage.error('TMDB 配置保存失败')
-    }
+    await settingsApi.saveTmdbConfig(tmdbConfig)
+    ElMessage.success('TMDB 配置保存成功')
   } catch (error) {
     console.error('保存 TMDB 配置失败:', error)
     ElMessage.error('保存 TMDB 配置失败')
@@ -261,23 +219,11 @@ const testTmdbApi = async () => {
   }
   
   try {
-    const response = await fetch('/api/settings/tmdb/test', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(tmdbConfig)
-    })
-
-    if (response.ok) {
-      const result = await response.json()
-      if (result.success) {
-        ElMessage.success('TMDB API 连接测试成功！')
-      } else {
-        ElMessage.error(`TMDB API 连接测试失败: ${result.message}`)
-      }
+    const result = await settingsApi.testTmdbApi(tmdbConfig)
+    if (result.success) {
+      ElMessage.success('TMDB API 连接测试成功！')
     } else {
-      ElMessage.error('TMDB API 连接测试失败')
+      ElMessage.error(`TMDB API 连接测试失败: ${result.message}`)
     }
   } catch (error) {
     console.error('测试 TMDB API 失败:', error)
@@ -325,7 +271,7 @@ const testTmdbApi = async () => {
   gap: 8px;
 }
 
-.path-input-group .el-input {
+path-input-group .el-input {
   flex-grow: 1;
 }
 
@@ -338,12 +284,5 @@ const testTmdbApi = async () => {
 .path-buttons .el-divider {
   margin: 0 4px;
   height: 16px;
-}
-
-/* 删除之前的按钮相关样式 */
-.path-input-group .el-input-group__append,
-.el-button-group .el-button,
-.el-button [class*='el-icon'] + span {
-  display: none;
 }
 </style>
