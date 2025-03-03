@@ -80,16 +80,37 @@ export const mediaLibraryApi = {
         }
     },
 
-    // 重新处理文件
-    async reprocessFile(filePath: string): Promise<ApiResponse> {
+    // 初始化媒体库
+    async initialize(): Promise<ApiResponse> {
         try {
-            const response = await fetch(`${BASE_URL}/medialibrary/files/${encodeURIComponent(filePath)}/reprocess`, {
+            const response = await fetch(`${BASE_URL}/medialibrary/initialize`, {
                 method: 'POST',
             });
             return await response.json();
         } catch (error) {
             return handleError(error);
         }
+    },
+
+    // 处理单个文件
+    async processFile(filePath: string): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${BASE_URL}/medialibrary/files/process`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filePath }),
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    // 重新处理文件 (兼容原有方法)
+    async reprocessFile(filePath: string): Promise<ApiResponse> {
+        return this.processFile(filePath);
     },
 
     // 获取图片

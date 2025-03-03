@@ -14,6 +14,7 @@ public partial class App : Application
     private readonly ServiceCollection _services;
     private ServiceProvider? _serviceProvider;
     private WebHostService? _webHostService;
+    private MediaLibraryService? _mediaLibraryService;
 
     public App()
     {
@@ -66,7 +67,13 @@ public partial class App : Application
 
         _serviceProvider = _services.BuildServiceProvider();
         _webHostService = _serviceProvider.GetRequiredService<WebHostService>();
+        _mediaLibraryService = _serviceProvider.GetRequiredService<MediaLibraryService>();
+        
+        // 启动Web服务
         await _webHostService.StartAsync();
+
+        // 初始化媒体库（加载所有文件信息，但不下载元数据）
+        await _mediaLibraryService.InitializeAndLoadFilesAsync();
 
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();

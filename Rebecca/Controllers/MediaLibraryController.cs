@@ -169,4 +169,57 @@ public class MediaLibraryController : ControllerBase
             return StatusCode(500, new { message = "获取图片失败，请检查系统日志" });
         }
     }
+
+    // 初始化并加载媒体文件
+    [HttpPost("initialize")]
+    public async Task<ActionResult> InitializeMediaLibrary()
+    {
+        try
+        {
+            _logger.LogInformation("正在初始化媒体库");
+            await _mediaLibraryService.InitializeAndLoadFilesAsync();
+            return Ok(new { message = "媒体库初始化完成" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化媒体库时发生错误");
+            return StatusCode(500, new { message = $"初始化媒体库失败: {ex.Message}" });
+        }
+    }
+
+    // 处理单个文件
+    [HttpPost("files/process")]
+    public async Task<ActionResult> ProcessSingleFile([FromBody] ProcessFileRequest request)
+    {
+        try
+        {
+            _logger.LogInformation($"正在处理单个文件: {request.FilePath}");
+            
+            if (string.IsNullOrEmpty(request.FilePath))
+            {
+                return BadRequest(new { message = "文件路径不能为空" });
+            }
+            
+            if (!System.IO.File.Exists(request.FilePath))
+            {
+                return NotFound(new { message = "指定的文件不存在" });
+            }
+
+            // 异步处理文件，不等待完成
+            _ = _mediaLibraryService.ProcessSingleFileAsync(request.FilePath);
+            
+            return Ok(new { message = "文件处理已开始" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "处理单个文件时发生错误");
+            return StatusCode(500, new { message = $"处理文件失败: {ex.Message}" });
+        }
+    }
+}
+
+// 处理单个文件的请求模型
+public class ProcessFileRequest
+{
+    public string FilePath { get; set; } = string.Empty;
 }

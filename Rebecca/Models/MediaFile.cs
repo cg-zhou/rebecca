@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace Rebecca.Models;
 
 public class MediaFile
@@ -14,6 +16,14 @@ public class MediaFile
     public string? NfoPath { get; set; }
     public string? ErrorMessage { get; set; }
     public long Size { get; set; }
+    
+    // 新增属性：指示是否缺失资源
+    public bool HasPoster => !string.IsNullOrEmpty(PosterPath) && File.Exists(PosterPath);
+    public bool HasFanart => !string.IsNullOrEmpty(FanartPath) && File.Exists(FanartPath);
+    public bool HasNfo => !string.IsNullOrEmpty(NfoPath) && File.Exists(NfoPath);
+    
+    // 检查是否所有元数据都完整
+    public bool IsMetadataComplete => HasPoster && HasFanart && HasNfo;
 }
 
 // 媒体文件状态枚举

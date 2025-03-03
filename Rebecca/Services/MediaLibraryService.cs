@@ -242,9 +242,49 @@ public class MediaLibraryService : IDisposable
             // 从文件名猜测电影名称
             string movieName = GetMovieName(Path.GetFileNameWithoutExtension(filePath));
 
+            // 设置本地文件路径
+            string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
+            string baseName = Path.GetFileNameWithoutExtension(filePath);
+            string posterPath = Path.Combine(directory, $"{baseName}-poster.jpg");
+            string fanartPath = Path.Combine(directory, $"{baseName}-fanart.jpg");
+            string nfoPath = Path.Combine(directory, $"{baseName}.nfo");
+
+            // 检查哪些文件已存在
+            bool posterExists = File.Exists(posterPath);
+            bool fanartExists = File.Exists(fanartPath);
+            bool nfoExists = File.Exists(nfoPath);
+
+            // 如果所有文件都已存在，则只更新媒体文件信息
+            if (posterExists && fanartExists && nfoExists)
+            {
+                _logger.LogInformation($"All metadata files already exist for: {filePath}");
+                
+                // 如果NFO存在，尝试从中读取电影信息
+                try
+                {
+                    var nfo = XmlUtils.Deserialize<StdEx.Media.Tmdb.Models.MovieNfo>(File.ReadAllText(nfoPath));
+                    mediaFile.Status = MediaFileStatus.Completed;
+                    mediaFile.Title = nfo.Title;
+                    mediaFile.Year = nfo.Year;
+                    mediaFile.PosterPath = posterPath;
+                    mediaFile.FanartPath = fanartPath;
+                    mediaFile.NfoPath = nfoPath;
+                    mediaFile.LastScanned = DateTime.Now;
+                    _mediaFiles[filePath] = mediaFile;
+                    await _webSocketHub.BroadcastMessage(MessageType.FileStatus, mediaFile);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, $"Failed to read existing NFO file: {nfoPath}, will re-generate metadata");
+                    // 继续处理以重新生成元数据
+                }
+            }
+
             // 更新状态为下载元数据中
             mediaFile.Status = MediaFileStatus.Downloading;
             _mediaFiles[filePath] = mediaFile;
+            await _webSocketHub.BroadcastMessage(MessageType.FileStatus, mediaFile);
 
             // 获取TMDB配置并创建TmdbUtils实例
             var config = await _tmdbSettingsService.GetConfigAsync();
@@ -252,28 +292,31 @@ public class MediaLibraryService : IDisposable
 
             // 从TMDB获取电影信息
             var movieNfo = await tmdbUtils.GetMovieNfo(movieName);
+            
+            // 只下载缺少的文件
+            if (!posterExists && !string.IsNullOrEmpty(movieNfo.Art.Poster))
+            {
+                _logger.LogInformation($"Downloading poster for: {filePath}");
+                await DownloadImageAsync(movieNfo.Art.Poster, posterPath, cancellationToken);
+            }
 
-            string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
-            string baseName = Path.GetFileNameWithoutExtension(filePath);
-
-            // 设置本地图片路径
-            string posterPath = Path.Combine(directory, $"{baseName}-poster.jpg");
-            string fanartPath = Path.Combine(directory, $"{baseName}-fanart.jpg");
-            string nfoPath = Path.Combine(directory, $"{baseName}.nfo");
-
-            // 下载海报图片
-            await DownloadImageAsync(movieNfo.Art.Poster, posterPath, cancellationToken);
-
-            // 下载背景图片
-            await DownloadImageAsync(movieNfo.Art.Fanart, fanartPath, cancellationToken);
+            if (!fanartExists && !string.IsNullOrEmpty(movieNfo.Art.Fanart))
+            {
+                _logger.LogInformation($"Downloading fanart for: {filePath}");
+                await DownloadImageAsync(movieNfo.Art.Fanart, fanartPath, cancellationToken);
+            }
 
             // 更新本地路径
             movieNfo.Art.LocalPoster = posterPath;
             movieNfo.Art.LocalFanart = fanartPath;
 
-            // 保存NFO文件
-            string nfoXml = XmlUtils.Serialize(movieNfo);
-            File.WriteAllText(nfoPath, nfoXml);
+            // 如果NFO不存在，则生成
+            if (!nfoExists)
+            {
+                _logger.LogInformation($"Generating NFO file for: {filePath}");
+                string nfoXml = XmlUtils.Serialize(movieNfo);
+                File.WriteAllText(nfoPath, nfoXml);
+            }
 
             // 更新媒体文件信息
             mediaFile.Status = MediaFileStatus.Completed;
@@ -359,5 +402,156 @@ public class MediaLibraryService : IDisposable
     public void Dispose()
     {
         _httpClient.Dispose();
+    }
+
+    /// <summary>
+    /// 初始化时加载所有媒体文件基本信息，不下载元数据
+    /// </summary>
+    public async Task InitializeAndLoadFilesAsync()
+    {
+        try
+        {
+            _logger.LogInformation("初始化并加载媒体文件信息");
+            var config = GetConfig();
+            var filesToProcess = new List<string>();
+
+            // 扫描配置的所有媒体库路径
+            foreach (var path in config.LibraryPaths)
+            {
+                if (Directory.Exists(path))
+                {
+                    var files = CollectVideoFiles(path);
+                    filesToProcess.AddRange(files);
+
+                    // 快速添加到媒体文件列表，仅基本信息
+                    foreach (var file in files)
+                    {
+                        if (!_mediaFiles.TryGetValue(file, out var existingFile))
+                        {
+                            // 文件首次添加
+                            var newMediaFile = CreateBasicMediaFileInfo(file);
+                            _mediaFiles[file] = newMediaFile;
+                        }
+                        else
+                        {
+                            // 文件已存在，检查元数据文件是否存在
+                            CheckMetadataFiles(existingFile);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning($"媒体库路径不存在: {path}");
+                }
+            }
+            
+            _logger.LogInformation($"初始化完成，共加载 {_mediaFiles.Count} 个媒体文件");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化媒体库文件时出错");
+        }
+    }
+    
+    /// <summary>
+    /// 为单个文件创建基本媒体信息对象
+    /// </summary>
+    private MediaFile CreateBasicMediaFileInfo(string filePath)
+    {
+        var fileInfo = new FileInfo(filePath);
+        string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
+        string baseName = Path.GetFileNameWithoutExtension(filePath);
+        
+        // 设置可能的元数据文件路径
+        string posterPath = Path.Combine(directory, $"{baseName}-poster.jpg");
+        string fanartPath = Path.Combine(directory, $"{baseName}-fanart.jpg");
+        string nfoPath = Path.Combine(directory, $"{baseName}.nfo");
+        
+        var mediaFile = new MediaFile
+        {
+            Path = filePath,
+            FileName = Path.GetFileName(filePath),
+            Status = MediaFileStatus.Pending,
+            Size = fileInfo.Length,
+            PosterPath = File.Exists(posterPath) ? posterPath : null,
+            FanartPath = File.Exists(fanartPath) ? fanartPath : null,
+            NfoPath = File.Exists(nfoPath) ? nfoPath : null
+        };
+        
+        // 如果NFO文件存在，尝试从中读取电影信息
+        if (File.Exists(nfoPath))
+        {
+            try
+            {
+                var movieNfo = XmlUtils.Deserialize<StdEx.Media.Tmdb.Models.MovieNfo>(File.ReadAllText(nfoPath));
+                mediaFile.Title = movieNfo.Title;
+                mediaFile.Year = movieNfo.Year;
+                mediaFile.Status = MediaFileStatus.Completed;
+                mediaFile.LastScanned = File.GetLastWriteTime(nfoPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"读取现有NFO文件失败: {nfoPath}");
+            }
+        }
+        
+        return mediaFile;
+    }
+    
+    /// <summary>
+    /// 检查媒体文件的元数据文件是否存在
+    /// </summary>
+    private void CheckMetadataFiles(MediaFile mediaFile)
+    {
+        if (mediaFile == null) return;
+        
+        string directory = Path.GetDirectoryName(mediaFile.Path) ?? string.Empty;
+        string baseName = Path.GetFileNameWithoutExtension(mediaFile.Path);
+        
+        // 更新元数据文件路径和状态
+        string posterPath = Path.Combine(directory, $"{baseName}-poster.jpg");
+        string fanartPath = Path.Combine(directory, $"{baseName}-fanart.jpg");
+        string nfoPath = Path.Combine(directory, $"{baseName}.nfo");
+        
+        mediaFile.PosterPath = File.Exists(posterPath) ? posterPath : null;
+        mediaFile.FanartPath = File.Exists(fanartPath) ? fanartPath : null;
+        mediaFile.NfoPath = File.Exists(nfoPath) ? nfoPath : null;
+        
+        // 如果所有元数据都存在但状态不是完成，则更新状态
+        if (mediaFile.HasPoster && mediaFile.HasFanart && mediaFile.HasNfo && 
+            mediaFile.Status != MediaFileStatus.Completed)
+        {
+            mediaFile.Status = MediaFileStatus.Completed;
+        }
+    }
+    
+    /// <summary>
+    /// 处理单个视频文件的所有缺失元数据
+    /// </summary>
+    public async Task ProcessSingleFileAsync(string filePath)
+    {
+        if (!_mediaFiles.TryGetValue(filePath, out var mediaFile))
+        {
+            _logger.LogWarning($"找不到要处理的媒体文件: {filePath}");
+            return;
+        }
+        
+        // 如果已经在扫描中，则跳过
+        if (mediaFile.Status == MediaFileStatus.Scanning || mediaFile.Status == MediaFileStatus.Downloading)
+        {
+            _logger.LogInformation($"文件已经在处理中: {filePath}");
+            return;
+        }
+        
+        // 使用取消令牌源以支持取消操作
+        using var cts = new CancellationTokenSource();
+        try
+        {
+            await ProcessVideoFileAsync(filePath, cts.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"处理单个文件时出错: {filePath}");
+        }
     }
 }
