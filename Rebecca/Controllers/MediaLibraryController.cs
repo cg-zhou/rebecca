@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using Rebecca.Models;
-using Rebecca.Services;
+using Rebecca.Services.Interfaces;
 using System.IO;
 
 namespace Rebecca.Controllers;
@@ -11,13 +11,13 @@ namespace Rebecca.Controllers;
 [Route("api/medialibrary")]
 public class MediaLibraryController : ControllerBase
 {
-    private readonly MediaLibraryService _mediaLibraryService;
+    private readonly IMediaLibraryManager _mediaLibraryManager;
     private readonly ILogger<MediaLibraryController> _logger;
     private readonly IContentTypeProvider _contentTypeProvider;
 
-    public MediaLibraryController(MediaLibraryService mediaLibraryService, ILogger<MediaLibraryController> logger)
+    public MediaLibraryController(IMediaLibraryManager mediaLibraryManager, ILogger<MediaLibraryController> logger)
     {
-        _mediaLibraryService = mediaLibraryService;
+        _mediaLibraryManager = mediaLibraryManager;
         _logger = logger;
         _contentTypeProvider = new FileExtensionContentTypeProvider();
     }
@@ -29,7 +29,7 @@ public class MediaLibraryController : ControllerBase
         try
         {
             _logger.LogInformation("正在获取媒体库配置");
-            var config = _mediaLibraryService.GetConfig();
+            var config = _mediaLibraryManager.GetConfig();
             return Ok(config);
         }
         catch (Exception ex)
@@ -51,7 +51,7 @@ public class MediaLibraryController : ControllerBase
                 return BadRequest(new { message = "配置不能为空" });
             }
 
-            _mediaLibraryService.SetConfig(config);
+            _mediaLibraryManager.SetConfig(config);
             return Ok(new { message = "配置已更新" });
         }
         catch (Exception ex)
@@ -68,7 +68,7 @@ public class MediaLibraryController : ControllerBase
         try
         {
             _logger.LogInformation("Getting media files");
-            var files = _mediaLibraryService.GetAllMediaFiles();
+            var files = _mediaLibraryManager.GetAllMediaFiles();
             return Ok(files);
         }
         catch (Exception ex)
@@ -85,13 +85,13 @@ public class MediaLibraryController : ControllerBase
         try
         {
             _logger.LogInformation("正在启动媒体库扫描");
-            if (_mediaLibraryService.IsScanning)
+            if (_mediaLibraryManager.IsScanning)
             {
                 return BadRequest(new { message = "已有扫描任务在进行中，请等待完成" });
             }
 
             // 异步启动扫描，不等待完成
-            _ = _mediaLibraryService.StartScanAsync();
+            _ = _mediaLibraryManager.StartScanAsync();
 
             return Ok(new { message = "媒体库扫描已启动" });
         }
@@ -109,7 +109,7 @@ public class MediaLibraryController : ControllerBase
         try
         {
             _logger.LogInformation("Cancelling media library scan");
-            _mediaLibraryService.CancelScan();
+            _mediaLibraryManager.CancelScan();
             return Ok(new { message = "扫描已取消" });
         }
         catch (Exception ex)
@@ -125,7 +125,7 @@ public class MediaLibraryController : ControllerBase
     {
         try
         {
-            var isScanning = _mediaLibraryService.IsScanning;
+            var isScanning = _mediaLibraryManager.IsScanning;
             _logger.LogDebug($"Scan status check: isScanning={isScanning}");
             return Ok(new { isScanning });
         }
@@ -177,7 +177,7 @@ public class MediaLibraryController : ControllerBase
         try
         {
             _logger.LogInformation("正在初始化媒体库");
-            await _mediaLibraryService.InitializeAndLoadFilesAsync();
+            await _mediaLibraryManager.InitializeAndLoadFilesAsync();
             return Ok(new { message = "媒体库初始化完成" });
         }
         catch (Exception ex)
@@ -206,7 +206,7 @@ public class MediaLibraryController : ControllerBase
             }
 
             // 异步处理文件，不等待完成
-            _ = _mediaLibraryService.ProcessSingleFileAsync(request.FilePath);
+            _ = _mediaLibraryManager.ProcessSingleFileAsync(request.FilePath);
             
             return Ok(new { message = "文件处理已开始" });
         }
