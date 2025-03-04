@@ -189,7 +189,7 @@ public class MediaLibraryController : ControllerBase
 
     // 处理单个文件
     [HttpPost("files/process")]
-    public async Task<ActionResult> ProcessSingleFile([FromBody] ProcessFileRequest request)
+    public ActionResult ProcessSingleFile([FromBody] ProcessFileRequest request)
     {
         try
         {

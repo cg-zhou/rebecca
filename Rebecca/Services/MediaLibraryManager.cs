@@ -142,7 +142,7 @@ public class MediaLibraryManager : IMediaLibraryManager
     }
 
     /// <inheritdoc />
-    public async Task InitializeAndLoadFilesAsync()
+    public Task InitializeAndLoadFilesAsync()
     {
         try
         {
@@ -190,6 +190,7 @@ public class MediaLibraryManager : IMediaLibraryManager
         {
             _logger.LogError(ex, "初始化媒体库文件时出错");
         }
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />

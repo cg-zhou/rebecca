@@ -30,9 +30,6 @@ public static class ServiceCollectionExtensions
         // 注册媒体库管理器
         services.AddSingleton<IMediaLibraryManager, MediaLibraryManager>();
         
-        // 为了向后兼容，注册适配器作为MediaLibraryService
-        services.AddSingleton<MediaLibraryService, MediaLibraryServiceAdapter>();
-        
         return services;
     }
 }
