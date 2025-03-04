@@ -23,29 +23,48 @@
         </el-table-column>
         <el-table-column prop="year" label="年份" width="80" />
         
-        <!-- 新增：元数据状态列 -->
+        <!-- NFO状态列 -->
         <el-table-column label="NFO" width="60">
           <template #default="scope">
-            <el-icon :color="scope.row.hasNfo ? '#67C23A' : '#F56C6C'">
-              <el-icon-check v-if="scope.row.hasNfo" />
-              <el-icon-close v-else />
-            </el-icon>
+            <template v-if="isNfoProcessing(scope.row)">
+              <el-icon class="is-loading"><el-icon-loading /></el-icon>
+            </template>
+            <template v-else>
+              <el-icon :color="scope.row.hasNfo ? '#67C23A' : '#F56C6C'">
+                <el-icon-check v-if="scope.row.hasNfo" />
+                <el-icon-close v-else />
+              </el-icon>
+            </template>
           </template>
         </el-table-column>
+
+        <!-- 海报状态列 -->
         <el-table-column label="海报" width="60">
           <template #default="scope">
-            <el-icon :color="scope.row.hasPoster ? '#67C23A' : '#F56C6C'">
-              <el-icon-check v-if="scope.row.hasPoster" />
-              <el-icon-close v-else />
-            </el-icon>
+            <template v-if="isPosterProcessing(scope.row)">
+              <el-icon class="is-loading"><el-icon-loading /></el-icon>
+            </template>
+            <template v-else>
+              <el-icon :color="scope.row.hasPoster ? '#67C23A' : '#F56C6C'">
+                <el-icon-check v-if="scope.row.hasPoster" />
+                <el-icon-close v-else />
+              </el-icon>
+            </template>
           </template>
         </el-table-column>
+
+        <!-- 背景图状态列 -->
         <el-table-column label="背景图" width="60">
           <template #default="scope">
-            <el-icon :color="scope.row.hasFanart ? '#67C23A' : '#F56C6C'">
-              <el-icon-check v-if="scope.row.hasFanart" />
-              <el-icon-close v-else />
-            </el-icon>
+            <template v-if="isFanartProcessing(scope.row)">
+              <el-icon class="is-loading"><el-icon-loading /></el-icon>
+            </template>
+            <template v-else>
+              <el-icon :color="scope.row.hasFanart ? '#67C23A' : '#F56C6C'">
+                <el-icon-check v-if="scope.row.hasFanart" />
+                <el-icon-close v-else />
+              </el-icon>
+            </template>
           </template>
         </el-table-column>
 
@@ -54,8 +73,6 @@
             <el-tag :type="getStatusType(scope.row.status)">
               {{ getStatusText(scope.row.status) }}
             </el-tag>
-            <!-- 显示处理中的加载指示器 -->
-            <el-icon class="is-loading" v-if="isFileProcessing(scope.row.path)"><el-icon-loading /></el-icon>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="140">
@@ -88,6 +105,7 @@ import type { WebSocketScanStatus, WebSocketErrorMessage } from '@/types/websock
 import { WebSocketEventType } from '@/types/websocket'
 import { mediaLibraryApi } from '@/api/api'
 import { webSocketService } from '@/services/websocketInstance'
+import { ProcessingComponent, getProcessingComponentName } from '@/views/mediaLibrary/types'
 
 const mediaFiles = ref<MediaFile[]>([])
 const isLoading = ref(false)
@@ -279,24 +297,43 @@ const processFile = async (file: MediaFile) => {
 
 // 判断文件是否正在处理中
 const isFileProcessing = (path: string): boolean => {
+  const file = mediaFiles.value.find(f => f.path === path);
   return processingFiles.value.includes(path) || 
-         mediaFiles.value.find(f => f.path === path)?.status === 'scanning' ||
-         mediaFiles.value.find(f => f.path === path)?.status === 'downloading'
+         (file?.status === 'scanning' || file?.status === 'downloading');
+}
+
+// 判断各个元数据项是否正在处理
+const isNfoProcessing = (file: MediaFile): boolean => {
+  return file.processingComponent === ProcessingComponent.Nfo || 
+         file.processingComponent === ProcessingComponent.Scanning;
+}
+
+const isPosterProcessing = (file: MediaFile): boolean => {
+  return file.processingComponent === ProcessingComponent.Poster;
+}
+
+const isFanartProcessing = (file: MediaFile): boolean => {
+  return file.processingComponent === ProcessingComponent.Fanart;
 }
 
 // 获取处理按钮文本
 const getProcessButtonText = (file: MediaFile): string => {
   if (file.status === 'error') {
-    return '重试'
+    return '重试';
   }
   
   if (file.isMetadataComplete) {
-    return '已完整'
+    return '已完整';
+  }
+  
+  // 如果正在处理中，显示"处理中"
+  if (isFileProcessing(file.path)) {
+    return '处理中';
   }
   
   // 计算缺失的元数据数量
-  const missing = [!file.hasNfo, !file.hasPoster, !file.hasFanart].filter(Boolean).length
-  return missing > 0 ? `缺失${missing}项` : '处理'
+  const missing = [!file.hasNfo, !file.hasPoster, !file.hasFanart].filter(Boolean).length;
+  return missing > 0 ? `缺失${missing}项` : '处理';
 }
 
 const startScan = async () => {
@@ -338,8 +375,14 @@ const cancelScan = async () => {
 }
 
 .is-loading {
-  margin-left: 5px;
   animation: rotating 2s linear infinite;
+  font-size: 16px;  /* 调整加载图标大小 */
+  color: #409EFF;   /* 使用 Element Plus 的主题蓝色 */
+}
+
+.el-icon {
+  font-size: 16px;  /* 统一所有图标大小 */
+  vertical-align: middle;
 }
 
 @keyframes rotating {

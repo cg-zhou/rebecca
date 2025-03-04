@@ -277,6 +277,7 @@ public class MediaLibraryManager : IMediaLibraryManager
         try
         {
             mediaFile.Status = MediaFileStatus.Scanning;
+            mediaFile.ProcessingComponent = ProcessingComponent.Scanning;
             _mediaFileRepository.AddOrUpdateFile(mediaFile);
             await _notificationService.NotifyFileStatusAsync(mediaFile);
 
@@ -288,6 +289,10 @@ public class MediaLibraryManager : IMediaLibraryManager
             {
                 _logger.LogInformation($"所有元数据文件已存在: {filePath}");
                 
+                mediaFile.ProcessingComponent = ProcessingComponent.Nfo;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
+                
                 // 如果NFO存在，尝试从中读取电影信息
                 try
                 {
@@ -295,6 +300,7 @@ public class MediaLibraryManager : IMediaLibraryManager
                     if (nfo != null)
                     {
                         mediaFile.Status = MediaFileStatus.Completed;
+                        mediaFile.ProcessingComponent = ProcessingComponent.None;
                         mediaFile.Title = nfo.Title;
                         mediaFile.Year = nfo.Year;
                         mediaFile.PosterPath = posterPath;
@@ -315,25 +321,47 @@ public class MediaLibraryManager : IMediaLibraryManager
 
             // 更新状态为下载元数据中
             mediaFile.Status = MediaFileStatus.Downloading;
+            
+            // 下载NFO信息
+            mediaFile.ProcessingComponent = ProcessingComponent.Nfo;
             _mediaFileRepository.AddOrUpdateFile(mediaFile);
             await _notificationService.NotifyFileStatusAsync(mediaFile);
-
+            
             // 从TMDB获取电影信息
             var movieNfo = await _metadataService.GetMovieMetadataAsync(movieName, cancellationToken);
-            
-            // 只下载缺少的文件
+
+            // 下载海报
             if (!posterExists && !string.IsNullOrEmpty(movieNfo.Art.Poster))
             {
+                mediaFile.ProcessingComponent = ProcessingComponent.Poster;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
+                
                 _logger.LogInformation($"下载海报: {filePath}");
                 await _metadataService.DownloadPosterAsync(movieNfo.Art.Poster, posterPath, cancellationToken);
                 posterExists = true;  // 更新状态
+                
+                // 立即更新海报状态
+                mediaFile.PosterPath = posterPath;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
             }
 
+            // 下载背景图
             if (!fanartExists && !string.IsNullOrEmpty(movieNfo.Art.Fanart))
             {
+                mediaFile.ProcessingComponent = ProcessingComponent.Fanart;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
+                
                 _logger.LogInformation($"下载背景图: {filePath}");
                 await _metadataService.DownloadFanartAsync(movieNfo.Art.Fanart, fanartPath, cancellationToken);
                 fanartExists = true;  // 更新状态
+                
+                // 立即更新背景图状态
+                mediaFile.FanartPath = fanartPath;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
             }
 
             // 更新本地路径
@@ -343,13 +371,23 @@ public class MediaLibraryManager : IMediaLibraryManager
             // 如果NFO不存在，则生成
             if (!nfoExists)
             {
+                mediaFile.ProcessingComponent = ProcessingComponent.Nfo;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
+                
                 _logger.LogInformation($"生成NFO文件: {filePath}");
                 await _metadataService.CreateNfoFileAsync(movieNfo, nfoPath, cancellationToken);
                 nfoExists = true;  // 更新状态
+                
+                // 立即更新NFO状态
+                mediaFile.NfoPath = nfoPath;
+                _mediaFileRepository.AddOrUpdateFile(mediaFile);
+                await _notificationService.NotifyFileStatusAsync(mediaFile);
             }
 
             // 更新媒体文件信息
             mediaFile.Status = MediaFileStatus.Completed;
+            mediaFile.ProcessingComponent = ProcessingComponent.None;
             mediaFile.Title = movieNfo.Title;
             mediaFile.Year = movieNfo.Year;
             mediaFile.PosterPath = posterExists ? posterPath : null;
@@ -364,6 +402,7 @@ public class MediaLibraryManager : IMediaLibraryManager
         catch (Exception ex)
         {
             mediaFile.Status = MediaFileStatus.Error;
+            mediaFile.ProcessingComponent = ProcessingComponent.None;
             mediaFile.ErrorMessage = ex.Message;
             _mediaFileRepository.AddOrUpdateFile(mediaFile);
             await _notificationService.NotifyFileStatusAsync(mediaFile);

@@ -1,15 +1,19 @@
-export interface MediaFile {
+export type MediaFile = {
     id: string;
     path: string;
     fileName: string;
-    status: string;
-    lastScanned?: string;  // 修改为 string 类型，因为从后端接收到的是 ISO 日期字符串
     title?: string;
     year?: number;
+    status: 'pending' | 'scanning' | 'downloading' | 'completed' | 'error';
+    processingComponent?: ProcessingComponent;
+    errorMessage?: string;
     posterPath?: string;
     fanartPath?: string;
     nfoPath?: string;
-    errorMessage?: string;
+    hasPoster: boolean;
+    hasFanart: boolean;
+    hasNfo: boolean;
+    isMetadataComplete: boolean;
     size: number;
 }
 
@@ -25,4 +29,31 @@ export interface TmdbConfigRequest {
     baseImageUrl?: string;
     language?: string;
     apiKeyType?: 'v3' | 'v4';
+}
+
+// 与后端对应的处理组件枚举
+export enum ProcessingComponent {
+    Scanning = 0,
+    Nfo = 1,
+    Poster = 2,
+    Fanart = 3,
+    None = 4
+}
+
+// 转换组件值到字符串的函数
+export function getProcessingComponentName(component: ProcessingComponent | undefined): string {
+    if (component === undefined) return 'none';
+    
+    switch (component) {
+        case ProcessingComponent.Scanning:
+            return 'scanning';
+        case ProcessingComponent.Nfo:
+            return 'nfo';
+        case ProcessingComponent.Poster:
+            return 'poster';
+        case ProcessingComponent.Fanart:
+            return 'fanart';
+        default:
+            return 'none';
+    }
 }
