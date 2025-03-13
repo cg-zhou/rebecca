@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebecca.Core.WebSockets;
-using Rebecca.Extensions;
 using StdEx.IO;
-using StdEx.Media.Tmdb;
 using StdEx.Net;
 using System.Diagnostics;
 using System.Reflection;
@@ -83,16 +81,9 @@ public class WebHostService
                 configure.AddConsole();
                 configure.AddDebug();
             });
-            
+
             builder.Services.AddSingleton<WebSocketHub>();
             builder.Services.AddSingleton<WebSocketService>();
-            
-            // 注册基础服务
-            builder.Services.AddSingleton<ITmdbSettingsService, TmdbSettingsService>();
-            builder.Services.AddSingleton<MediaLibraryConfigService>();
-            
-            // 使用扩展方法注册所有媒体库相关服务
-            builder.Services.AddMediaLibraryServices();
 
             _app = builder.Build();
 

@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebecca.Core.WebSockets;
-using Rebecca.Extensions;
 using Rebecca.Services;
-using Rebecca.Services.Interfaces;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -16,7 +14,6 @@ public partial class App : Application
     private readonly ServiceCollection _services;
     private ServiceProvider? _serviceProvider;
     private WebHostService? _webHostService;
-    private IMediaLibraryManager? _mediaLibraryManager;
 
     public App()
     {
@@ -49,20 +46,15 @@ public partial class App : Application
     private void ConfigureServices()
     {
         // Add logging services
-        _services.AddLogging(configure => 
+        _services.AddLogging(configure =>
         {
             configure.AddConsole();
             configure.AddDebug();
         });
-        
+
         _services.AddSingleton<WebHostService>();
         _services.AddSingleton<MainWindow>();
         _services.AddSingleton<WebSocketHub>();
-        _services.AddSingleton<MediaLibraryConfigService>();
-        _services.AddSingleton<ITmdbSettingsService, TmdbSettingsService>();
-        
-        // 使用扩展方法注册所有媒体库相关服务
-        _services.AddMediaLibraryServices();
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -71,13 +63,9 @@ public partial class App : Application
 
         _serviceProvider = _services.BuildServiceProvider();
         _webHostService = _serviceProvider.GetRequiredService<WebHostService>();
-        _mediaLibraryManager = _serviceProvider.GetRequiredService<IMediaLibraryManager>();
-        
+
         // 启动Web服务
         await _webHostService.StartAsync();
-
-        // 初始化媒体库（加载所有文件信息，但不下载元数据）
-        await _mediaLibraryManager.InitializeAndLoadFilesAsync();
 
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
