@@ -20,12 +20,6 @@ import { ref } from 'vue'
 
 const routes = ref([
   {
-    path: '/media-library',
-    name: 'media-library',
-    title: '媒体库',
-    description: '管理您的媒体文件'
-  },
-  {
     path: '/settings',
     name: 'settings',
     title: '设置',

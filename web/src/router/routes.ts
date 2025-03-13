@@ -1,7 +1,6 @@
 import Home from '../views/Home.vue'
 import Settings from '../views/Settings.vue'
 import About from '../views/About.vue'
-import MediaLibrary from '../views/mediaLibrary/MediaLibrary.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -16,12 +15,6 @@ const routes = [
     name: 'settings',
     component: Settings,
     meta: { title: '设置' }
-  },
-  {
-    path: '/media-library',
-    name: 'media-library',
-    component: MediaLibrary,
-    meta: { title: '媒体库' }
   },
   {
     path: '/about',

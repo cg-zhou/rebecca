@@ -1,4 +1,4 @@
-import type { MediaFile, MediaLibraryConfig, TmdbConfigRequest, OpenFolderRequest, ApiResponse } from './types';
+import type { OpenFolderRequest, ApiResponse } from './types';
 
 const BASE_URL = '/api';
 

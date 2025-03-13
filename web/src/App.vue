@@ -17,10 +17,6 @@ const activeMenu = computed(() => route.path)
               <el-icon><House /></el-icon>
               <span>首页</span>
             </el-menu-item>
-            <el-menu-item index="/media-library">
-              <el-icon><Folder /></el-icon>
-              <span>媒体库</span>
-            </el-menu-item>
           </div>
           <div class="bottom-menu">
             <el-menu-item index="/settings">
