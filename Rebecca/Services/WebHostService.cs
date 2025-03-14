@@ -18,7 +18,11 @@ public class WebHostService
     private readonly ILogger<WebHostService> _logger;
     public int Port { get; private set; } = 0;
 
+#if DEBUG
     private static bool QuickDebug => true;
+#else
+    private static bool QuickDebug => false;
+#endif
 
     public WebHostService(ILogger<WebHostService> logger)
     {
