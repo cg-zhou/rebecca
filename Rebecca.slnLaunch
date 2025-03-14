@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "DebugConfig",
+    "Projects": [
+      {
+        "Path": "Rebecca\\Rebecca.csproj",
+        "Action": "Start",
+        "DebugTarget": "Rebecca"
+      },
+      {
+        "Path": "web\\web.esproj",
+        "Action": "Start",
+        "DebugTarget": "Launch Edge against localhost"
+      }
+    ]
+  }
+]
