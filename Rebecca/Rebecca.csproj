@@ -27,11 +27,7 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\StdEx\StdEx.csproj" />
-    <!--<ProjectReference Include="..\web\web.esproj" Condition="'$(Configuration)' == 'Debug'" />-->
+    <PackageReference Include="StdEx" Version="1.0.6" />
   </ItemGroup>
 
   <!-- 只在Release模式下嵌入前端文件 -->

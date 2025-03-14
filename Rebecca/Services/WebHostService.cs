@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Rebecca.Core.WebSockets;
 using StdEx.IO;
 using StdEx.Net;
-using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 
@@ -19,20 +18,25 @@ public class WebHostService
     private readonly ILogger<WebHostService> _logger;
     public int Port { get; private set; } = 0;
 
-    // 添加只读属性判断是否调试模式
-    private static bool IsDebugMode => Debugger.IsAttached;
+    private static bool QuickDebug => true;
 
     public WebHostService(ILogger<WebHostService> logger)
     {
         _logger = logger;
     }
 
-    private async Task ServeResource(HttpContext context, string path, Assembly assembly)
+    private async Task ServeResource(HttpContext context, string path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = "index.html";
+        }
+
         var resourcePath = @$"wwwroot\{path}".Replace('/', '\\');
         _logger.LogInformation($"Looking for resource: {resourcePath}");
 
-        using var stream = Assembly.GetExecutingAssembly().GetEmbeddedResource(resourcePath);
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(resourcePath);
         if (stream == null)
         {
             context.Response.StatusCode = 404;
@@ -120,8 +124,8 @@ public class WebHostService
                         var response = new
                         {
                             StatusCode = context.Response.StatusCode,
-                            Message = IsDebugMode ? contextFeature.Error.Message : "内部服务器错误",
-                            Details = IsDebugMode ? contextFeature.Error.StackTrace : null
+                            Message = contextFeature.Error.Message,
+                            Details = contextFeature.Error.StackTrace
                         };
 
                         await context.Response.WriteAsJsonAsync(response);
@@ -129,7 +133,7 @@ public class WebHostService
                 });
             });
 
-            if (IsDebugMode)
+            if (QuickDebug)
             {
                 _app.UseProxyToDevServer();
                 _logger.LogInformation("Running in DEBUG mode, using proxy to dev server");
@@ -142,20 +146,15 @@ public class WebHostService
                 {
                     try
                     {
-                        var path = context.Request.Path.Value?.TrimStart('/') ?? "";
-                        if (string.IsNullOrEmpty(path))
-                        {
-                            path = "index.html";
-                        }
-
-                        if (context.Request.Path.ToString().StartsWith("/api"))
+                        var path = context.Request.Path.Value?.Trim('/') ?? "";
+                        if (path.StartsWith("api/"))
                         {
                             await next();
                             return;
                         }
 
                         _logger.LogInformation($"Request: {context.Request.Method} {context.Request.Path}");
-                        await ServeResource(context, path, Assembly.GetExecutingAssembly());
+                        await ServeResource(context, path);
                     }
                     catch (Exception ex)
                     {
