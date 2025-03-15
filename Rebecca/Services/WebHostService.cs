@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebecca.Core.WebSockets;
-using StdEx.IO;
 using StdEx.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -47,8 +46,8 @@ public class WebHostService
             return;
         }
 
-        var contentType = ContentTypeUtils.GetContentType(resourcePath); ;
-        context.Response.ContentType = contentType;
+        var mimeType = MimeTypeUtils.GetMimeType(resourcePath); ;
+        context.Response.ContentType = mimeType;
 
         _logger.LogInformation($"Serving resource: {resourcePath}");
         await stream.CopyToAsync(context.Response.Body);

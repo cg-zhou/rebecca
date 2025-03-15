@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
+using StdEx.Serialization;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
 
 namespace Rebecca.Core.WebSockets;
 
@@ -10,10 +10,6 @@ public class WebSocketHub
 {
     private readonly ILogger<WebSocketHub> _logger;
     private readonly ConcurrentDictionary<string, WebSocket> _sockets = new();
-    private readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public WebSocketHub(ILogger<WebSocketHub> logger)
     {
@@ -50,7 +46,7 @@ public class WebSocketHub
                 Data = data
             };
 
-            var messageJson = JsonSerializer.Serialize(message, _jsonOptions);
+            var messageJson = JsonUtils.Serialize(message, useCamelCase: true);
             var messageBytes = Encoding.UTF8.GetBytes(messageJson);
             var segment = new ArraySegment<byte>(messageBytes);
 
