@@ -36,3 +36,32 @@ export const folderApi = {
         }
     },
 };
+
+// Settings APIs
+export const settingsApi = {
+    // 获取开机启动状态
+    async getStartup(): Promise<{ enabled: boolean }> {
+        try {
+            const response = await fetch(`${BASE_URL}/settings/startup`);
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    // 设置开机启动
+    async setStartup(enabled: boolean): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${BASE_URL}/settings/startup`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ enabled }),
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+};

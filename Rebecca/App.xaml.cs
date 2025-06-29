@@ -53,7 +53,13 @@ public partial class App : Application
         });
 
         _services.AddSingleton<WebHostService>();
-        _services.AddSingleton<MainWindow>();
+        _services.AddSingleton<StartupService>();
+        _services.AddSingleton<MainWindow>(provider =>
+        {
+            var webHostService = provider.GetRequiredService<WebHostService>();
+            var startupService = provider.GetRequiredService<StartupService>();
+            return new MainWindow(webHostService, startupService);
+        });
         _services.AddSingleton<WebSocketHub>();
     }
 

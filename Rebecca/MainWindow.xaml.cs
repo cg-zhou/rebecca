@@ -9,30 +9,30 @@ namespace Rebecca;
 
 public partial class MainWindow : Window
 {
-    private readonly TrayIconService _trayIconService;
+    private readonly TrayIconService? _trayIconService;
     private readonly WebHostService? _webHostService;
 
     // 用于设计器
     public MainWindow()
     {
         InitializeComponent();
-        _trayIconService = new TrayIconService(this);
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
         StateChanged += MainWindow_StateChanged;
     }
 
     // 用于运行时
-    public MainWindow(WebHostService webHostService) : this()
+    public MainWindow(WebHostService webHostService, StartupService startupService) : this()
     {
         _webHostService = webHostService;
+        _trayIconService = new TrayIconService(this, startupService);
     }
 
     private void MainWindow_StateChanged(object? sender, EventArgs e)
     {
         if (WindowState == WindowState.Minimized)
         {
-            _trayIconService.MinimizeToTray();
+            _trayIconService?.MinimizeToTray();
         }
     }
 
@@ -72,7 +72,7 @@ public partial class MainWindow : Window
     {
         if (e.Cancel == false)
         {
-            _trayIconService.Dispose();
+            _trayIconService?.Dispose();
         }
     }
 }

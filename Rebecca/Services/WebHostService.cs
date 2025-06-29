@@ -91,6 +91,7 @@ public class WebHostService
 
             builder.Services.AddSingleton<WebSocketHub>();
             builder.Services.AddSingleton<WebSocketService>();
+            builder.Services.AddSingleton<StartupService>();
 
             _app = builder.Build();
 
