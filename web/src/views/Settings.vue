@@ -2,7 +2,7 @@
   <div class="settings">
     <el-card class="setting-card">
       <template #header>
-        <div class="card-header">
+        <div>
           <span>通用设置</span>
         </div>
       </template>
@@ -14,7 +14,7 @@
 
     <el-card class="setting-card hotkey-card">
       <template #header>
-        <div class="card-header">
+        <div>
           <span>快捷键管理</span>
         </div>
       </template>
@@ -58,11 +58,7 @@ const onStartupChange = async (value: boolean) => {
 }
 
 .setting-card {
-  margin-bottom: 20px; /* Space between cards */
-}
-
-.card-header {
-  font-weight: bold;
+  margin-bottom: 20px;
 }
 
 .setting-item {

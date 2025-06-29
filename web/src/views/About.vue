@@ -2,7 +2,7 @@
   <div class="about">
     <el-card class="about-card">
       <template #header>
-        <div class="card-header">
+        <div>
           <span>关于 Rebecca</span>
         </div>
       </template>
@@ -39,21 +39,11 @@ const openUrl = (url: string) => {
 
 <style scoped>
 .about {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: calc(100vh - 120px);
   padding: 1rem;
 }
 
 .about-card {
-  width: 100%;
-  max-width: 600px;
-}
-
-.card-header {
-  font-size: 1.2rem;
-  font-weight: 500;
+  margin-bottom: 20px;
 }
 
 .card-content {
@@ -63,7 +53,7 @@ const openUrl = (url: string) => {
 .description {
   color: var(--el-text-color-regular);
   line-height: 1.6;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .links {

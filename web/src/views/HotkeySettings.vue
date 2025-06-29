@@ -18,14 +18,13 @@
         <el-dialog
             v-model="dialogVisible"
             title="设置快捷键"
-            width="30%"
+            width="400px"
             @close="resetDialog"
         >
-            <p>请按下您想要设置的快捷键组合:</p>
             <el-input
                 v-model="displayCurrentEditingHotkey"
                 @keydown="handleDialogKeydown"
-                placeholder="按下按键"
+                placeholder="请按下快捷键"
                 readonly
                 ref="hotkeyInputRef"
             ></el-input>
@@ -121,7 +120,9 @@ const openHotkeyDialog = (hotkey: HotkeyConfig) => {
     currentEditingHotkey.value = { ...hotkey }; // Create a copy to avoid direct modification
     dialogVisible.value = true;
     nextTick(() => {
-        hotkeyInputRef.value?.focus();
+        setTimeout(() => {
+            hotkeyInputRef.value?.focus();
+        }, 50); // Small delay to ensure element is fully rendered
     });
 };
 
@@ -193,7 +194,7 @@ const handleDialogKeydown = (event: Event) => {
 const confirmHotkey = async () => {
     // Validation: If key is empty but modifiers are present, it's an invalid hotkey
     if (currentEditingHotkey.value.key === '' && currentEditingHotkey.value.modifiers !== HotkeyModifiers.None) {
-        ElMessage.warning('快捷键不能只包含修饰键，请设置一个普通按键。');
+        ElMessage.warning('快捷键不能只包含 Ctrl/Alt/Shift，请设置一个普通按键。');
         return;
     }
 

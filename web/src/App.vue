@@ -54,7 +54,7 @@ const activeMenu = computed(() => route.path)
   left: 0;
   top: 0;
   background-color: var(--el-menu-bg-color);  /* 使用Element Plus的变量 */
-  width: 180px !important;
+  width: 140px !important;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
@@ -89,7 +89,7 @@ const activeMenu = computed(() => route.path)
 .el-menu {
   --el-menu-bg-color: var(--el-menu-bg-color);
   --el-menu-text-color: var(--el-menu-text-color);
-  --el-menu-hover-bg-color: var(--el-menu-item-hover-fill);  /* 修改这行 */
+  --el-menu-hover-bg-color: var(--el-menu-item-hover-fill);
   --el-menu-active-text-color: var(--el-menu-active-text-color);
   border-right: none !important;
   background-color: transparent;
@@ -112,7 +112,7 @@ const activeMenu = computed(() => route.path)
 }
 
 .el-main {
-  margin-left: 180px;
+  margin-left: 140px;
   padding: 20px;
 }
 
