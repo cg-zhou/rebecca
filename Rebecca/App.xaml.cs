@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebecca.Core.WebSockets;
 using Rebecca.Services;
+using Rebecca.Models; // Add this for HotkeyAction and HotkeyModifiers
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -93,11 +94,11 @@ public partial class App : Application
         {
             Action action = hotkey.ActionId switch
             {
-                "volume_up" => volumeService.VolumeUp,
-                "volume_down" => volumeService.VolumeDown,
+                HotkeyAction.VolumeUp => volumeService.VolumeUp,
+                HotkeyAction.VolumeDown => volumeService.VolumeDown,
                 _ => () => { }
             };
-            hotkeyService.RegisterHotkey(hotkey.Key, (Services.HotkeyModifiers)hotkey.Modifiers, action);
+            hotkeyService.RegisterHotkey(hotkey.ActionId, hotkey.Key, hotkey.Modifiers, action);
         }
 
         // 启动Web服务

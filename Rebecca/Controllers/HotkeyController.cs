@@ -22,71 +22,93 @@ namespace Rebecca.Controllers
         [HttpGet]
         public ActionResult<IEnumerable<HotkeyConfig>> GetHotkeys()
         {
-            return Ok(_settingsService.LoadHotkeys());
+            var list = _settingsService.LoadHotkeys().ToList();
+
+            // Ensure default hotkeys exist
+            if (!list.Any(x => x.ActionId == HotkeyAction.VolumeUp))
+            {
+                list.Add(new HotkeyConfig
+                {
+                    ActionId = HotkeyAction.VolumeUp,
+                    Key = string.Empty,
+                    Modifiers = HotkeyModifiers.None
+                });
+            }
+            if (!list.Any(x => x.ActionId == HotkeyAction.VolumeDown))
+            {
+                list.Add(new HotkeyConfig
+                {
+                    ActionId = HotkeyAction.VolumeDown,
+                    Key = string.Empty,
+                    Modifiers = HotkeyModifiers.None
+                });
+            }
+            return Ok(list);
         }
 
-        [HttpPost]
-        public IActionResult AddHotkey([FromBody] HotkeyConfig hotkeyConfig)
+        [HttpPost("set")]
+        public IActionResult SetHotkey([FromBody] HotkeyConfig hotkeyConfig)
         {
             var hotkeys = _settingsService.LoadHotkeys().ToList();
-            hotkeyConfig.Id = hotkeys.Any() ? hotkeys.Max(h => h.Id) + 1 : 1;
-            hotkeys.Add(hotkeyConfig);
+            var existingHotkey = hotkeys.FirstOrDefault(h => h.ActionId == hotkeyConfig.ActionId);
+
+            if (existingHotkey != null)
+            {
+                // Update existing hotkey
+                UnregisterHotkey(existingHotkey.ActionId); // Unregister by ActionId
+                existingHotkey.Key = hotkeyConfig.Key;
+                existingHotkey.Modifiers = hotkeyConfig.Modifiers;
+            }
+            else
+            {
+                // Add new hotkey (ActionId is already set in hotkeyConfig)
+                hotkeys.Add(hotkeyConfig);
+                existingHotkey = hotkeyConfig; // Reference the newly added hotkey
+            }
+
             _settingsService.SaveHotkeys(hotkeys);
-            RegisterHotkey(hotkeyConfig);
-            return Ok(hotkeyConfig);
+            RegisterHotkey(existingHotkey.ActionId, existingHotkey.Key, existingHotkey.Modifiers);
+
+            // Return a fresh copy to ensure all properties are correctly serialized
+            return Ok(new HotkeyConfig
+            {
+                ActionId = existingHotkey.ActionId,
+                Key = existingHotkey.Key,
+                Modifiers = existingHotkey.Modifiers
+            });
         }
 
-        [HttpPut("{id}")]
-        public IActionResult UpdateHotkey(int id, [FromBody] HotkeyConfig hotkeyConfig)
+        [HttpDelete("clear/{actionId}")]
+        public IActionResult ClearHotkey(HotkeyAction actionId)
         {
             var hotkeys = _settingsService.LoadHotkeys().ToList();
-            var existingHotkey = hotkeys.FirstOrDefault(h => h.Id == id);
-            if (existingHotkey == null)
+            var hotkeyToClear = hotkeys.FirstOrDefault(h => h.ActionId == actionId);
+
+            if (hotkeyToClear == null)
             {
                 return NotFound();
             }
 
-            UnregisterHotkey(existingHotkey);
-
-            existingHotkey.Key = hotkeyConfig.Key;
-            existingHotkey.Modifiers = hotkeyConfig.Modifiers;
-            existingHotkey.ActionId = hotkeyConfig.ActionId;
-
-            _settingsService.SaveHotkeys(hotkeys);
-            RegisterHotkey(existingHotkey);
-            return Ok(existingHotkey);
-        }
-
-        [HttpDelete("{id}")]
-        public IActionResult DeleteHotkey(int id)
-        {
-            var hotkeys = _settingsService.LoadHotkeys().ToList();
-            var hotkeyToDelete = hotkeys.FirstOrDefault(h => h.Id == id);
-            if (hotkeyToDelete == null)
-            {
-                return NotFound();
-            }
-
-            UnregisterHotkey(hotkeyToDelete);
-            hotkeys.Remove(hotkeyToDelete);
+            UnregisterHotkey(hotkeyToClear.ActionId); // Unregister by ActionId
+            hotkeys.Remove(hotkeyToClear);
             _settingsService.SaveHotkeys(hotkeys);
             return NoContent();
         }
 
-        private void RegisterHotkey(HotkeyConfig hotkeyConfig)
+        private void RegisterHotkey(HotkeyAction actionId, string key, HotkeyModifiers modifiers)
         {
-            Action action = hotkeyConfig.ActionId switch
+            Action action = actionId switch
             {
-                "volume_up" => _volumeService.VolumeUp,
-                "volume_down" => _volumeService.VolumeDown,
+                HotkeyAction.VolumeUp => _volumeService.VolumeUp,
+                HotkeyAction.VolumeDown => _volumeService.VolumeDown,
                 _ => () => { }
             };
-            _hotkeyService.RegisterHotkey(hotkeyConfig.Key, (Services.HotkeyModifiers)hotkeyConfig.Modifiers, action);
+            _hotkeyService.RegisterHotkey(actionId, key, modifiers, action);
         }
 
-        private void UnregisterHotkey(HotkeyConfig hotkeyConfig)
+        private void UnregisterHotkey(HotkeyAction actionId)
         {
-            _hotkeyService.UnregisterHotkey(hotkeyConfig.Id);
+            _hotkeyService.UnregisterHotkey(actionId);
         }
     }
 }

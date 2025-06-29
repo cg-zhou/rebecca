@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Rebecca.Models;
 
 namespace Rebecca.Services
 {
@@ -14,61 +15,82 @@ namespace Rebecca.Services
         private static extern short VkKeyScanA(char ch);
 
         private const int WM_HOTKEY = 0x0312;
-        private int _currentId;
-        private readonly Dictionary<int, Action> _hotkeyActions;
+        private int _nextSystemHotkeyId; // Used to generate unique system-wide hotkey IDs
+        private readonly Dictionary<int, Action> _systemHotkeyIdToActions; // Maps system-assigned ID to Action
+        private readonly Dictionary<HotkeyAction, int> _actionToSystemHotkeyId; // Maps HotkeyAction to system-assigned ID
         private readonly MessageWindow _messageWindow;
         private readonly System.Windows.Threading.Dispatcher _dispatcher;
 
         public HotkeyService(System.Windows.Threading.Dispatcher dispatcher)
         {
-            _currentId = 0;
-            _hotkeyActions = new Dictionary<int, Action>();
+            _nextSystemHotkeyId = 1; // Start from 1
+            _systemHotkeyIdToActions = new Dictionary<int, Action>();
+            _actionToSystemHotkeyId = new Dictionary<HotkeyAction, int>();
             _messageWindow = new MessageWindow();
             _messageWindow.HotkeyTriggered += OnHotkeyTriggered;
             _dispatcher = dispatcher;
         }
 
-        public int RegisterHotkey(string key, HotkeyModifiers modifiers, Action action)
+        public void RegisterHotkey(HotkeyAction actionId, string key, HotkeyModifiers modifiers, Action action)
         {
-            _currentId++;
+            // If this actionId already has a hotkey registered, unregister it first
+            if (_actionToSystemHotkeyId.TryGetValue(actionId, out int existingSystemId))
+            {
+                UnregisterHotKeyInternal(existingSystemId);
+                _actionToSystemHotkeyId.Remove(actionId);
+                _systemHotkeyIdToActions.Remove(existingSystemId);
+            }
+
             uint fsModifiers = (uint)modifiers;
             if (string.IsNullOrEmpty(key))
             {
-                return 0;
+                Console.WriteLine($"Cannot register hotkey for {actionId}: Key is empty.");
+                return; // Do not register if key is empty
             }
+
             short vk = VkKeyScanA(key.ToCharArray()[0]);
 
             if (vk == -1)
             {
-                Console.WriteLine($"Invalid key: {key}");
-                return -1;
+                Console.WriteLine($"Invalid key for {actionId}: {key}");
+                return; // Do not register if key is invalid
             }
 
-            int hotkeyId = _currentId;
+            int newSystemId = _nextSystemHotkeyId++;
+
             _dispatcher.Invoke(() =>
             {
-                if (!RegisterHotKey(_messageWindow.Handle, hotkeyId, fsModifiers, (uint)vk))
+                if (!RegisterHotKey(_messageWindow.Handle, newSystemId, fsModifiers, (uint)vk))
                 {
-                    Console.WriteLine($"Failed to register hotkey: {modifiers} + {key}");
+                    Console.WriteLine($"Failed to register hotkey for {actionId}: {modifiers} + {key}");
                 }
             });
 
-            _hotkeyActions[hotkeyId] = action;
-            return hotkeyId;
+            _actionToSystemHotkeyId[actionId] = newSystemId;
+            _systemHotkeyIdToActions[newSystemId] = action;
         }
 
-        public void UnregisterHotkey(int id)
+        public void UnregisterHotkey(HotkeyAction actionId)
+        {
+            if (_actionToSystemHotkeyId.TryGetValue(actionId, out int systemId))
+            {
+                UnregisterHotKeyInternal(systemId);
+                _actionToSystemHotkeyId.Remove(actionId);
+                _systemHotkeyIdToActions.Remove(systemId);
+            }
+        }
+
+        private void UnregisterHotKeyInternal(int systemId)
         {
             _dispatcher.Invoke(() =>
             {
-                UnregisterHotKey(_messageWindow.Handle, id);
+                UnregisterHotKey(_messageWindow.Handle, systemId);
             });
-            _hotkeyActions.Remove(id);
         }
 
         private void OnHotkeyTriggered(int id)
         {
-            if (_hotkeyActions.TryGetValue(id, out Action? action))
+            if (_systemHotkeyIdToActions.TryGetValue(id, out Action? action))
             {
                 _dispatcher.Invoke(action);
             }
@@ -76,9 +98,9 @@ namespace Rebecca.Services
 
         public void Dispose()
         {
-            foreach (var id in _hotkeyActions.Keys)
+            foreach (var systemId in _systemHotkeyIdToActions.Keys.ToList()) // ToList to avoid modifying collection during iteration
             {
-                UnregisterHotKey(_messageWindow.Handle, id);
+                UnregisterHotKeyInternal(systemId);
             }
             _messageWindow.Dispose();
         }
@@ -107,15 +129,5 @@ namespace Rebecca.Services
                 }
             }
         }
-    }
-
-    [Flags]
-    public enum HotkeyModifiers : uint
-    {
-        None = 0,
-        Alt = 0x0001,
-        Control = 0x0002,
-        Shift = 0x0004,
-        Windows = 0x0008
     }
 }

@@ -1,34 +1,25 @@
-import type { OpenFolderRequest, ApiResponse, HotkeyConfig } from './types';
+import type { OpenFolderRequest, ApiResponse, HotkeyConfig, HotkeyAction } from './types';
 
 const BASE_URL = '/api';
 
-// 统一处理请求错误
-const handleError = (error: any) => {
+function handleError(error: any): any {
     console.error('API Error:', error);
-    throw error;
-};
+    if (error instanceof SyntaxError) {
+        // Handle cases where the response is not valid JSON (e.g., 204 No Content)
+        return { success: false, message: 'Invalid JSON response' };
+    }
+    return { success: false, message: error.message || 'An unknown error occurred' };
+}
 
-// Folder APIs
 export const folderApi = {
-    // 选择文件夹
-    async selectFolder(): Promise<{ success: boolean; path?: string }> {
-        try {
-            const response = await fetch(`${BASE_URL}/folder/select`);
-            return await response.json();
-        } catch (error) {
-            return handleError(error);
-        }
-    },
-
-    // 打开文件夹
-    async openFolder(path: string): Promise<ApiResponse> {
+    async openFolder(request: OpenFolderRequest): Promise<ApiResponse> {
         try {
             const response = await fetch(`${BASE_URL}/folder/open`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ path } as OpenFolderRequest),
+                body: JSON.stringify(request),
             });
             return await response.json();
         } catch (error) {
@@ -37,9 +28,42 @@ export const folderApi = {
     },
 };
 
-// Settings APIs
+export const volumeApi = {
+    async volumeUp(): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${BASE_URL}/volume/up`, {
+                method: 'POST',
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    async volumeDown(): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${BASE_URL}/volume/down`, {
+                method: 'POST',
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    async toggleMute(): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${BASE_URL}/volume/mute`, {
+                method: 'POST',
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+};
+
 export const settingsApi = {
-    // 获取开机启动状态
     async getStartup(): Promise<{ enabled: boolean }> {
         try {
             const response = await fetch(`${BASE_URL}/settings/startup`);
@@ -49,7 +73,6 @@ export const settingsApi = {
         }
     },
 
-    // 设置开机启动
     async setStartup(enabled: boolean): Promise<ApiResponse> {
         try {
             const response = await fetch(`${BASE_URL}/settings/startup`, {
@@ -77,41 +100,32 @@ export const hotkeyApi = {
         }
     },
 
-    async addHotkey(hotkey: HotkeyConfig): Promise<HotkeyConfig> {
+    async setHotkey(hotkey: HotkeyConfig): Promise<HotkeyConfig> {
         try {
-            const response = await fetch(`${BASE_URL}/hotkey`, {
+            const response = await fetch(`${BASE_URL}/hotkey/set`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(hotkey),
             });
+            if (!response.ok) {
+                throw new Error(response.statusText);
+            }
             return await response.json();
         } catch (error) {
             return handleError(error);
         }
     },
 
-    async updateHotkey(id: number, hotkey: HotkeyConfig): Promise<HotkeyConfig> {
+    async clearHotkey(actionId: HotkeyAction): Promise<ApiResponse> {
         try {
-            const response = await fetch(`${BASE_URL}/hotkey/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(hotkey),
-            });
-            return await response.json();
-        } catch (error) {
-            return handleError(error);
-        }
-    },
-
-    async deleteHotkey(id: number): Promise<ApiResponse> {
-        try {
-            const response = await fetch(`${BASE_URL}/hotkey/${id}`, {
+            const response = await fetch(`${BASE_URL}/hotkey/clear/${actionId}`, {
                 method: 'DELETE',
             });
+            if (response.status === 204) {
+                return { success: true, message: 'Cleared successfully' };
+            }
             return await response.json();
         } catch (error) {
             return handleError(error);

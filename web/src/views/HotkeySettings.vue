@@ -1,28 +1,19 @@
 <template>
     <div class="hotkey-settings">
-        <h3>音量控制快捷键</h3>
-
-        <div class="hotkey-item">
-            <label>调大音量:</label>
-            <el-input
-                v-model="displayVolumeUpHotkey"
-                placeholder="未设置"
-                readonly
-            ></el-input>
-            <el-button type="primary" @click="openHotkeyDialog('volume_up')">设置快捷键</el-button>
-            <el-button type="danger" @click="clearHotkey('volume_up')">清除</el-button>
-        </div>
-
-        <div class="hotkey-item">
-            <label>调小音量:</label>
-            <el-input
-                v-model="displayVolumeDownHotkey"
-                placeholder="未设置"
-                readonly
-            ></el-input>
-            <el-button type="primary" @click="openHotkeyDialog('volume_down')">设置快捷键</el-button>
-            <el-button type="danger" @click="clearHotkey('volume_down')">清除</el-button>
-        </div>
+        <el-table :data="tableData" style="width: 100%">
+            <el-table-column prop="label" label="功能名称" width="180"></el-table-column>
+            <el-table-column label="快捷键">
+                <template #default="scope">
+                    {{ formatHotkey(scope.row.hotkey) }}
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180">
+                <template #default="scope">
+                    <el-button size="small" @click="openHotkeyDialog(scope.row.hotkey)">设置</el-button>
+                    <el-button size="small" type="danger" @click="clearHotkey(scope.row.hotkey.actionId)">清除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
 
         <el-dialog
             v-model="dialogVisible"
@@ -49,39 +40,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue';
+import { ref, onMounted, computed, nextTick, type Ref } from 'vue';
 import { hotkeyApi } from '@/api/api';
-import type { HotkeyConfig } from '@/api/types';
-import { HotkeyModifiers } from '@/api/types';
-import { ElMessage, ElDialog, ElInput } from 'element-plus';
+import { HotkeyAction, type HotkeyConfig, HotkeyModifiers } from '@/api/types';
+import { ElMessage, ElDialog, ElInput, ElTable, ElTableColumn } from 'element-plus';
 
 const volumeUpHotkey = ref<HotkeyConfig>({
+    actionId: HotkeyAction.VolumeUp,
     key: '',
     modifiers: HotkeyModifiers.None,
-    actionId: 'volume_up',
 });
 
 const volumeDownHotkey = ref<HotkeyConfig>({
+    actionId: HotkeyAction.VolumeDown,
     key: '',
     modifiers: HotkeyModifiers.None,
-    actionId: 'volume_down',
 });
 
 const dialogVisible = ref(false);
 const currentEditingHotkey = ref<HotkeyConfig>({
+    actionId: HotkeyAction.VolumeUp, // Default to VolumeUp for initialization
     key: '',
     modifiers: HotkeyModifiers.None,
-    actionId: '',
 });
 const hotkeyInputRef = ref<InstanceType<typeof ElInput> | null>(null);
 
-const displayVolumeUpHotkey = computed(() => {
-    return formatHotkey(volumeUpHotkey.value);
-});
-
-const displayVolumeDownHotkey = computed(() => {
-    return formatHotkey(volumeDownHotkey.value);
-});
+const tableData = computed(() => [
+    { label: '调大音量', hotkey: volumeUpHotkey.value },
+    { label: '调小音量', hotkey: volumeDownHotkey.value },
+]);
 
 const displayCurrentEditingHotkey = computed(() => {
     return formatHotkey(currentEditingHotkey.value);
@@ -90,8 +77,8 @@ const displayCurrentEditingHotkey = computed(() => {
 const fetchHotkeys = async () => {
     try {
         const fetchedHotkeys = await hotkeyApi.getHotkeys();
-        const up = fetchedHotkeys.find(h => h.actionId === 'volume_up');
-        const down = fetchedHotkeys.find(h => h.actionId === 'volume_down');
+        const up = fetchedHotkeys.find(h => h.actionId === HotkeyAction.VolumeUp);
+        const down = fetchedHotkeys.find(h => h.actionId === HotkeyAction.VolumeDown);
 
         if (up) volumeUpHotkey.value = up;
         if (down) volumeDownHotkey.value = down;
@@ -102,62 +89,36 @@ const fetchHotkeys = async () => {
 
 const saveHotkey = async (hotkey: HotkeyConfig) => {
     try {
-        if (hotkey.key === '' && hotkey.modifiers === HotkeyModifiers.None) {
-            // If key and modifiers are empty, it means we want to delete the hotkey
-            if (hotkey.id) {
-                await hotkeyApi.deleteHotkey(hotkey.id);
-                ElMessage.success('快捷键已清除');
-                hotkey.id = undefined; // Clear the ID after deletion
-            }
-        } else {
-            if (hotkey.id) {
-                await hotkeyApi.updateHotkey(hotkey.id, hotkey);
-                ElMessage.success('快捷键更新成功');
-            } else {
-                const newHotkey = await hotkeyApi.addHotkey(hotkey);
-                ElMessage.success('快捷键添加成功');
-                hotkey.id = newHotkey.id; // Update the ID for future updates
-            }
+        const savedHotkey = await hotkeyApi.setHotkey(hotkey);
+        ElMessage.success('快捷键保存成功');
+        // Update the corresponding hotkey ref with the saved data
+        if (savedHotkey.actionId === HotkeyAction.VolumeUp) {
+            volumeUpHotkey.value = savedHotkey;
+        } else if (savedHotkey.actionId === HotkeyAction.VolumeDown) {
+            volumeDownHotkey.value = savedHotkey;
         }
     } catch (error) {
         ElMessage.error('保存失败');
     }
 };
 
-const clearHotkey = async (actionId: string) => {
-    let hotkeyToClear: HotkeyConfig;
-    if (actionId === 'volume_up') {
-        hotkeyToClear = volumeUpHotkey.value;
-    } else if (actionId === 'volume_down') {
-        hotkeyToClear = volumeDownHotkey.value;
-    } else {
-        return;
+const clearHotkey = async (actionId: HotkeyAction) => {
+    try {
+        await hotkeyApi.clearHotkey(actionId);
+        ElMessage.success('快捷键已清除');
+        // Update the corresponding hotkey ref to reflect cleared state
+        if (actionId === HotkeyAction.VolumeUp) {
+            volumeUpHotkey.value = { actionId: HotkeyAction.VolumeUp, key: '', modifiers: HotkeyModifiers.None };
+        } else if (actionId === HotkeyAction.VolumeDown) {
+            volumeDownHotkey.value = { actionId: HotkeyAction.VolumeDown, key: '', modifiers: HotkeyModifiers.None };
+        }
+    } catch (error) {
+        ElMessage.error('清除失败');
     }
-
-    hotkeyToClear.key = '';
-    hotkeyToClear.modifiers = HotkeyModifiers.None;
-    await saveHotkey(hotkeyToClear);
 };
 
-const openHotkeyDialog = (actionId: string) => {
-    // Initialize currentEditingHotkey based on the existing hotkey for the actionId
-    let existingHotkey: HotkeyConfig | undefined;
-    if (actionId === 'volume_up') {
-        existingHotkey = volumeUpHotkey.value;
-    } else if (actionId === 'volume_down') {
-        existingHotkey = volumeDownHotkey.value;
-    }
-
-    if (existingHotkey) {
-        currentEditingHotkey.value = { ...existingHotkey }; // Create a copy to avoid direct modification
-    } else {
-        currentEditingHotkey.value = {
-            key: '',
-            modifiers: HotkeyModifiers.None,
-            actionId: actionId,
-        };
-    }
-
+const openHotkeyDialog = (hotkey: HotkeyConfig) => {
+    currentEditingHotkey.value = { ...hotkey }; // Create a copy to avoid direct modification
     dialogVisible.value = true;
     nextTick(() => {
         hotkeyInputRef.value?.focus();
@@ -236,22 +197,15 @@ const confirmHotkey = async () => {
         return;
     }
 
-    // Update the corresponding hotkey ref
-    if (currentEditingHotkey.value.actionId === 'volume_up') {
-        volumeUpHotkey.value = { ...currentEditingHotkey.value };
-    } else if (currentEditingHotkey.value.actionId === 'volume_down') {
-        volumeDownHotkey.value = { ...currentEditingHotkey.value };
-    }
-
     await saveHotkey(currentEditingHotkey.value);
     dialogVisible.value = false;
 };
 
 const resetDialog = () => {
     currentEditingHotkey.value = {
+        actionId: HotkeyAction.VolumeUp, // Reset to a default actionId
         key: '',
         modifiers: HotkeyModifiers.None,
-        actionId: '',
     };
 };
 
@@ -270,23 +224,5 @@ onMounted(fetchHotkeys);
 </script>
 
 <style scoped>
-.hotkey-settings {
-    padding: 20px;
-}
 
-.hotkey-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.hotkey-item label {
-    width: 100px; /* Adjust as needed */
-    text-align: right;
-}
-
-.hotkey-item .el-input {
-    flex-grow: 1;
-}
 </style>

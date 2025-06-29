@@ -1,11 +1,13 @@
+using System.Text.Json.Serialization;
+
 namespace Rebecca.Models
 {
     public class HotkeyConfig
     {
-        public int Id { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public HotkeyAction ActionId { get; set; }
         public string Key { get; set; } = string.Empty;
         public HotkeyModifiers Modifiers { get; set; }
-        public string ActionId { get; set; } = string.Empty;
     }
 
     public enum HotkeyModifiers : uint
