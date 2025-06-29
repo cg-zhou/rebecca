@@ -1,4 +1,4 @@
-import type { OpenFolderRequest, ApiResponse } from './types';
+import type { OpenFolderRequest, ApiResponse, HotkeyConfig } from './types';
 
 const BASE_URL = '/api';
 
@@ -58,6 +58,59 @@ export const settingsApi = {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ enabled }),
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+};
+
+// Hotkey APIs
+export const hotkeyApi = {
+    async getHotkeys(): Promise<HotkeyConfig[]> {
+        try {
+            const response = await fetch(`${BASE_URL}/hotkey`);
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    async addHotkey(hotkey: HotkeyConfig): Promise<HotkeyConfig> {
+        try {
+            const response = await fetch(`${BASE_URL}/hotkey`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(hotkey),
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    async updateHotkey(id: number, hotkey: HotkeyConfig): Promise<HotkeyConfig> {
+        try {
+            const response = await fetch(`${BASE_URL}/hotkey/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(hotkey),
+            });
+            return await response.json();
+        } catch (error) {
+            return handleError(error);
+        }
+    },
+
+    async deleteHotkey(id: number): Promise<ApiResponse> {
+        try {
+            const response = await fetch(`${BASE_URL}/hotkey/${id}`, {
+                method: 'DELETE',
             });
             return await response.json();
         } catch (error) {

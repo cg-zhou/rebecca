@@ -52,8 +52,22 @@ public partial class App : Application
             configure.AddDebug();
         });
 
-        _services.AddSingleton<WebHostService>();
+        // Register HotkeyService once, with the Dispatcher
+        _services.AddSingleton<HotkeyService>(provider => new HotkeyService(Current.Dispatcher));
+
+        // Register WebHostService, injecting the already registered HotkeyService
+        _services.AddSingleton<WebHostService>(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<WebHostService>>();
+            var hotkeyService = provider.GetRequiredService<HotkeyService>(); // Get the already registered instance
+            return new WebHostService(logger, hotkeyService);
+        });
+
+        // Register other services
         _services.AddSingleton<StartupService>();
+        _services.AddSingleton<VolumeService>();
+        _services.AddSingleton<SettingsService>();
+        _services.AddSingleton<Controllers.HotkeyController>();
         _services.AddSingleton<MainWindow>(provider =>
         {
             var webHostService = provider.GetRequiredService<WebHostService>();
@@ -69,6 +83,22 @@ public partial class App : Application
 
         _serviceProvider = _services.BuildServiceProvider();
         _webHostService = _serviceProvider.GetRequiredService<WebHostService>();
+        var hotkeyService = _serviceProvider.GetRequiredService<HotkeyService>();
+        var settingsService = _serviceProvider.GetRequiredService<SettingsService>();
+        var volumeService = _serviceProvider.GetRequiredService<VolumeService>();
+
+        // Load and register hotkeys
+        var hotkeys = settingsService.LoadHotkeys();
+        foreach (var hotkey in hotkeys)
+        {
+            Action action = hotkey.ActionId switch
+            {
+                "volume_up" => volumeService.VolumeUp,
+                "volume_down" => volumeService.VolumeDown,
+                _ => () => { }
+            };
+            hotkeyService.RegisterHotkey(hotkey.Key, (Services.HotkeyModifiers)hotkey.Modifiers, action);
+        }
 
         // 启动Web服务
         await _webHostService.StartAsync();
@@ -83,6 +113,7 @@ public partial class App : Application
         {
             await _webHostService.StopAsync();
         }
+        _serviceProvider?.GetRequiredService<HotkeyService>().Dispose();
         _serviceProvider?.Dispose();
         base.OnExit(e);
     }

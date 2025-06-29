@@ -15,6 +15,7 @@ public class WebHostService
 {
     private WebApplication? _app;
     private readonly ILogger<WebHostService> _logger;
+    private readonly HotkeyService _hotkeyService;
     public int Port { get; private set; } = 0;
 
 #if DEBUG
@@ -23,9 +24,10 @@ public class WebHostService
     private static bool QuickDebug => false;
 #endif
 
-    public WebHostService(ILogger<WebHostService> logger)
+    public WebHostService(ILogger<WebHostService> logger, HotkeyService hotkeyService)
     {
         _logger = logger;
+        _hotkeyService = hotkeyService;
     }
 
     private async Task ServeResource(HttpContext context, string path)
@@ -92,6 +94,9 @@ public class WebHostService
             builder.Services.AddSingleton<WebSocketHub>();
             builder.Services.AddSingleton<WebSocketService>();
             builder.Services.AddSingleton<StartupService>();
+            builder.Services.AddSingleton<VolumeService>();
+            builder.Services.AddSingleton<HotkeyService>(_hotkeyService);
+            builder.Services.AddSingleton<SettingsService>();
 
             _app = builder.Build();
 

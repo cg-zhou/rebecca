@@ -15,7 +15,7 @@ const activeMenu = computed(() => route.path)
           <div class="top-menu">
             <el-menu-item index="/">
               <el-icon><House /></el-icon>
-              <span>首页</span>
+              <span>主页</span>
             </el-menu-item>
           </div>
           <div class="bottom-menu">
@@ -23,6 +23,7 @@ const activeMenu = computed(() => route.path)
               <el-icon><Setting /></el-icon>
               <span>设置</span>
             </el-menu-item>
+            
             <el-menu-item index="/about">
               <el-icon><InfoFilled /></el-icon>
               <span>关于</span>
@@ -66,6 +67,8 @@ const activeMenu = computed(() => route.path)
   display: flex;
   flex-direction: column;
   background-color: var(--el-menu-bg-color);
+  padding-top: 20px; /* 顶部留出缝隙 */
+  padding-bottom: 20px; /* 底部留出缝隙 */
 }
 
 .top-menu {

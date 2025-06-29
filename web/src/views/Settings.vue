@@ -1,10 +1,25 @@
 <template>
   <div class="settings">
-    <div class="setting-item">
-      <label for="startup-switch">开机启动</label>
-      <el-switch id="startup-switch" v-model="isStartupEnabled" @change="onStartupChange" />
-    </div>
-    <!-- 可以添加其他设置内容 -->
+    <el-card class="setting-card">
+      <template #header>
+        <div class="card-header">
+          <span>通用设置</span>
+        </div>
+      </template>
+      <div class="setting-item">
+        <label for="startup-switch">开机启动</label>
+        <el-switch id="startup-switch" v-model="isStartupEnabled" @change="onStartupChange" />
+      </div>
+    </el-card>
+
+    <el-card class="setting-card hotkey-card">
+      <template #header>
+        <div class="card-header">
+          <span>快捷键管理</span>
+        </div>
+      </template>
+      <HotkeySettings />
+    </el-card>
   </div>
 </template>
 
@@ -12,6 +27,7 @@
 import { ref, onMounted } from 'vue';
 import { settingsApi } from '@/api/api';
 import { ElMessage } from 'element-plus';
+import HotkeySettings from './HotkeySettings.vue';
 
 const isStartupEnabled = ref(false);
 
@@ -41,9 +57,18 @@ const onStartupChange = async (value: boolean) => {
   padding: 1rem;
 }
 
+.setting-card {
+  margin-bottom: 20px; /* Space between cards */
+}
+
+.card-header {
+  font-weight: bold;
+}
+
 .setting-item {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-bottom: 1rem;
 }
 </style>
