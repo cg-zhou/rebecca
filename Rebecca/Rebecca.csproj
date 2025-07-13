@@ -12,6 +12,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>AnyCPU;x64;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,4 +44,18 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CleanReleaseFolder" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+	<PropertyGroup>
+      <OutputFolder>$(MSBuildProjectDirectory)\$(OutputPath)</OutputFolder>
+      <WebViewFolder>$(OutputPath)Rebecca.exe.WebView2</WebViewFolder>
+      <RuntimeArm64Folder>$(OutputPath)runtimes\win-arm64</RuntimeArm64Folder>
+	</PropertyGroup>
+    <Message Text="MSBuildProjectDirectory=$(MSBuildProjectDirectory)" Importance="high" />
+    <Message Text="OutputPath=$(OutputPath)" Importance="high" />
+    <Exec Command="PowerShell -Command &quot;Remove-Item -Path '$(OutputFolder)*.pdb'&quot;" />
+    <Exec Command="PowerShell -Command &quot;Remove-Item -Path '$(OutputFolder)*.xml'&quot;" />
+    <Exec Command="PowerShell -Command &quot;Remove-Item -Path '$(OutputFolder)Microsoft.Web.WebView2.WinForms.dll'&quot;" />
+    <Exec Command="PowerShell -Command &quot;if (Test-Path '$(WebViewFolder)') { Remove-Item -Recurse -Path '$(WebViewFolder)' }&quot;" />
+    <Exec Command="PowerShell -Command &quot;if (Test-Path '$(RuntimeArm64Folder)') { Remove-Item -Recurse -Path '$(RuntimeArm64Folder)' }&quot;" />
+  </Target>
 </Project>

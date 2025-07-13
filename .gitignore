@@ -57,3 +57,4 @@ _ReSharper*/
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
 /Rebecca/web/.vscode
+/Rebecca.Package/AppPackages

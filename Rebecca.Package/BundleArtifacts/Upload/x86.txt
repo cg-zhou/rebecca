@@ -1,0 +1,2 @@
+MainPackage=C:\Users\cgzhou\Documents\GitHub\rebecca\Rebecca.Package\bin\x86\Release\Upload\Rebecca.Package_0.1.18.0_x86.msix
+SymbolPackage=C:\Users\cgzhou\Documents\GitHub\rebecca\Rebecca.Package\bin\x86\Release\Upload\Rebecca.Package_0.1.18.0\Rebecca.Package_0.1.18.0_x86.appxsym
